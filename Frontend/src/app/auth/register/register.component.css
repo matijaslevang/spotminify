@@ -8,7 +8,7 @@
 .register-card {
   max-width: 600px;
   width: 100%;
-  padding: 40px 30px;
+  padding: 20px 20px;
   border-radius: 12px;
   background: var(--color-white-smoke);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);

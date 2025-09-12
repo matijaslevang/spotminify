@@ -17,6 +17,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
+import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 
 @NgModule({
   declarations: [
@@ -36,7 +37,9 @@ import { MatNativeDateModule } from '@angular/material/core';
     MatInputModule,
     MatNativeDateModule,
     MatFormFieldModule,
-    MatDatepickerModule
+    MatDatepickerModule,
+    FormsModule,
+    ReactiveFormsModule 
   ],
   providers: [
     provideAnimationsAsync(),
