@@ -1,0 +1,23 @@
+<mat-toolbar color="primary" class="app-toolbar" role="banner">
+    <a class="brand" routerLink="/" aria-label="Go to homepage">
+        <span class="brand-text">Spotminify</span>
+    </a>
+
+
+    <nav class="spacer nav-links" role="navigation" aria-label="Primary">
+        <a mat-button routerLink="/">Home</a>
+        <a mat-button routerLink="/about">About</a>
+        <a mat-button routerLink="/events">Events</a>
+        <a mat-button routerLink="/contact">Contact</a>
+    </nav>
+
+
+    <div class="toolbar-actions">
+        <mat-menu #menu="matMenu">
+            <button mat-menu-item (click)="logout()">Logout</button>
+        </mat-menu>
+        </div>
+</mat-toolbar>
+
+
+<router-outlet></router-outlet>

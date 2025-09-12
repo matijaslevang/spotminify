@@ -1,0 +1,20 @@
+<div class="login-card">
+  <h2>Log in</h2>
+  <p>Welcome back!</p>
+  <form (submit)="login(); $event.preventDefault()">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Email</mat-label>
+      <input matInput type="email" [(ngModel)]="email" name="email" required>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Password</mat-label>
+      <input matInput type="password" [(ngModel)]="password" name="password" required>
+    </mat-form-field>
+
+    <p *ngIf="error" class="error-msg">{{ error }}</p>
+
+    <button mat-raised-button class="btn-primary" type="submit">Log in</button>
+  </form>
+  <a href="/register">Register instead</a>
+</div>
