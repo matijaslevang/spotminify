@@ -69,3 +69,13 @@ class BackendStack(Stack):
             self, "MyAPIAuthorizer",
             cognito_user_pools=[self.user_pool]
         )
+
+        items = api.root.add_resource("items")
+
+        items.add_method(
+            "GET",
+            apigw.MockIntegration(),
+            authorization_type=apigw.AuthorizationType.COGNITO,
+            authorizer=authorizer
+        )
+
