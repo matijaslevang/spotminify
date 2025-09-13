@@ -3,6 +3,9 @@ import { RouterModule, Routes } from '@angular/router';
 import { LoginComponent } from './auth/login/login.component';
 import { RegisterComponent } from './auth/register/register.component';
 import { HomeComponent } from './layout/home/home.component';
+import { ArtistViewComponent } from './content/artist/artist-view/artist-view.component';
+import { SongViewComponent } from './content/song/song-view/song-view.component';
+import { AlbumViewComponent } from './content/album/album-view/album-view.component';
 
 const routes: Routes = [
   { path: '', redirectTo: '/home', pathMatch: 'full' },
@@ -10,6 +13,9 @@ const routes: Routes = [
   { path: 'register', component: RegisterComponent },
   { path: 'home', component:HomeComponent },
   { path: '**', redirectTo: 'home' },
+  { path: 'artist', component: ArtistViewComponent },
+  { path: 'song', component: SongViewComponent },
+  { path: 'album', component: AlbumViewComponent },
 ];
 
 @NgModule({
