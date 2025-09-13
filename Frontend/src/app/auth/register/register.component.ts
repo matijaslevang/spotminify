@@ -10,6 +10,7 @@ import {MatSnackBar} from '@angular/material/snack-bar';
   styleUrl: './register.component.css'
 })
 export class RegisterComponent {
+  today: Date = new Date();
   registerForm = new FormGroup({
     email: new FormControl('', [Validators.required, Validators.email]),
     username: new FormControl('', [Validators.required, Validators.minLength(8)]),
@@ -35,16 +36,35 @@ export class RegisterComponent {
       password: this.registerForm.value.password,
       firstName: this.registerForm.value.firstName,
       lastName: this.registerForm.value.lastName,
-      birthDate: this.registerForm.value.birthDate
+      birthDate: this.formatDateForCognito(this.registerForm.value.birthDate)
     }).subscribe({
       next: res => {
-        this.router.navigate(['/login']);
+        console.log(res)
+        this.router.navigate(['/home']);
       },
       error: err => {
-        this.error = err.error.message || 'Registration failed';
+        this.error = err.message || 'Registration failed';
       }
     });
   }
+
+  formatDateForCognito(date: Date | string): string {
+  if (!date) return '';
+  let day: string, month: string, year: string;
+
+  if (typeof date === 'string') {
+    const parts = date.split('.');
+    if (parts.length !== 3) return '';
+    [day, month, year] = parts;
+  } else {
+    day = String(date.getDate()).padStart(2,'0');
+    month = String(date.getMonth() + 1).padStart(2,'0');
+    year = String(date.getFullYear());
+  }
+
+  return `${year}-${month}-${day}`;
+}
+
 }
 export function MatchValidator(controlName: string, matchingControlName: string): ValidatorFn {
   return (formGroup: AbstractControl): ValidationErrors | null => {

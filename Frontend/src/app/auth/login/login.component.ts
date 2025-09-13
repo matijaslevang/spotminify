@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { AuthService } from '../auth.service';
 import { Router } from '@angular/router';
+import { FormControl, FormGroup, Validators } from '@angular/forms';
 
 @Component({
   selector: 'app-login',
@@ -13,15 +14,25 @@ export class LoginComponent {
   error = '';
 
   constructor(private authService: AuthService, private router: Router) {}
+  loginForm = new FormGroup({
+    username: new FormControl('', [Validators.required, Validators.minLength(8)]),
+    password: new FormControl('', [Validators.required, Validators.minLength(8)]),
+  });
 
   login() {
-    this.authService.login({email: this.email, password: this.password}).subscribe({
-      next: (res: any) => {
-        this.authService.setToken(res.token); // backend returns JWT
-        this.router.navigate(['/']); // navigates to home
+    if(!this.loginForm.valid)
+      return;
+    
+    this.authService.login({
+      username: this.loginForm.value.username,
+      password: this.loginForm.value.password
+    }).subscribe({
+      next: res => {
+        console.log(res)
+        this.router.navigate(['/home']);
       },
       error: err => {
-        this.error = err.error.message || 'Login failed';
+        this.error = err.message || 'Login failed';
       }
     });
   }

@@ -3,40 +3,40 @@
   <form [formGroup]="registerForm" (submit)="register(); $event.preventDefault()">
     <mat-form-field appearance="outline" class="full-width">
       <mat-label>First Name</mat-label>
-      <input matInput type="text" formControlName="firstName" name="firstName" required>
+      <input matInput type="text" formControlName="firstName" name="firstName" >
     </mat-form-field>
 
     <mat-form-field appearance="outline" class="full-width">
       <mat-label>Last Name</mat-label>
-      <input matInput type="text" formControlName="lastName" name="lastName" required>
+      <input matInput type="text" formControlName="lastName" name="lastName" >
     </mat-form-field>
 
     <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Birth Date</mat-label>
-      <input matInput [matDatepicker]="picker" formControlName="birthDate" name="birthDate" required>
+      <mat-label>Birth Date (MM/DD/YYYY)</mat-label>
+      <input matInput [matDatepicker]="picker" formControlName="birthDate" name="birthDate" [max]="today">
       <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
       <mat-datepicker #picker></mat-datepicker>
     </mat-form-field>
 
     <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Email</mat-label>
-      <input matInput type="email" formControlName="email" name="email" required>
+      <mat-label>Email (example&#64;mail.com)</mat-label>
+      <input matInput type="email" formControlName="email" name="email" >
       <mat-error *ngIf="registerForm.controls.email.errors!=null && registerForm.controls.email.errors['conflict']">
           Account with given email already exists
         </mat-error>
     </mat-form-field>
 
     <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Username</mat-label>
-      <input matInput type="username" formControlName="username" name="username" required>
+      <mat-label>Username (minimum 8 characters)</mat-label>
+      <input matInput type="username" formControlName="username" name="username" >
       <mat-error *ngIf="registerForm.controls.username.errors!=null && registerForm.controls.username.errors['conflict']">
           Account with given username already exists
         </mat-error>
     </mat-form-field>
 
     <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Password</mat-label>
-      <input matInput type="password" matInput formControlName="password" name="password" required>
+      <mat-label>Password (must contain capital letters and numbers)</mat-label>
+      <input type="password" matInput formControlName="password" name="password" >
     </mat-form-field>
 
     <mat-form-field appearance="outline" class="full-width">
