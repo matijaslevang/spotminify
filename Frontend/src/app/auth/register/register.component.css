@@ -1,68 +1,66 @@
-div {
-  max-width: 400px;
-  margin: 50px auto;
-  padding: 30px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  background-color: #fff;
-  font-family: Arial, sans-serif;
+:host {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-image: url("/login.jpg");
 }
-
-h2 {
+.register-card {
+  max-width: 600px;
+  width: 100%;
+  padding: 20px 20px;
+  border-radius: 12px;
+  background: var(--color-white-smoke);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  animation: fadeIn 0.6s ease-in-out;
+  font-family: "Fira Sans Condensed", sans-serif !important;
   text-align: center;
-  margin-bottom: 20px;
-  color: #333;
 }
 
-form {
+.register-card h2 {
+  color: var(--color-blush);
+  font-size: 2em;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+
+/* Form */
+.register-card form {
   display: flex;
   flex-direction: column;
 }
 
-input[type="text"],
-input[type="email"],
-input[type="password"] {
-  padding: 10px 12px;
-  margin-bottom: 15px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 14px;
-  transition: border-color 0.2s;
-}
-
-input[type="text"]:focus,
-input[type="email"]:focus,
-input[type="password"]:focus {
-  border-color: #28a745;
-  outline: none;
-}
-
-button {
-  padding: 10px 15px;
-  background-color: #28a745;
-  color: #fff;
-  font-size: 16px;
-  border: none;
-  border-radius: 6px;
+/* Buttons */
+.register-card button.mat-raised-button {
+  padding: 12px 15px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  border: none;
+  transition: 0.3s ease;
 }
 
-button:hover {
-  background-color: #218838;
+.register-card button.mat-raised-button:hover {
+  background: var(--color-blush);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(210, 88, 134, 0.4);
 }
 
-p {
-  text-align: center;
-  margin-top: 10px;
-  color: red;
-  font-weight: bold;
+/* Links */
+.register-card a {
+  font-size: small;
 }
 
-@media (max-width: 500px) {
-  div {
-    margin: 20px;
-    padding: 20px;
-  }
+/* Error message */
+.register-card .error-msg {
+  font-size: small;
+  color: #e53b35;
+  font-weight: 200;
+  margin: 0;
+  padding-bottom: 15px;
+}
+
+/* Animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }

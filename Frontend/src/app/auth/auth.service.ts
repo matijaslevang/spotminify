@@ -1,32 +1,88 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, from, map } from 'rxjs';
+import { 
+  signUp, 
+  signIn, 
+  signOut, 
+  fetchAuthSession, 
+  getCurrentUser, 
+  confirmSignUp 
+} from 'aws-amplify/auth';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-  private apiUrl = 'https://53hzf6rmba.execute-api.eu-central-1.amazonaws.com/prod/';
 
-  constructor(private http: HttpClient) {}
+  constructor() {}
 
-  register(data: {email: string, password: string, firstName: string, lastName: string, birthDate: string}): Observable<any> {
-    return this.http.post(`${this.apiUrl}/register`, data);
+  register(data: { 
+    email: string, 
+    username: string, 
+    password: string, 
+    firstName: string, 
+    lastName: string, 
+    birthDate: string 
+  }): Observable<any> {
+    return from(
+      signUp({
+        username: data.username,
+        password: data.password,
+        options: {
+          userAttributes: {
+            email: data.email,
+            given_name: data.firstName,
+            family_name: data.lastName,
+            birthdate: data.birthDate,
+            'custom:role': 'User'
+          }
+        }
+      })
+    );
   }
 
-  login(data: {email: string, password: string}): Observable<any> {
-    return this.http.post(`${this.apiUrl}/login`, data);
+  confirmRegistration(username: string, code: string): Observable<any> {
+    return from(confirmSignUp({ username, confirmationCode: code }));
   }
 
-  logout() {
-    localStorage.removeItem('token');
+  login(data: { username: string, password: string }): Observable<any> {
+    return from(signIn({ 
+      username: data.username, 
+      password: data.password 
+    }));
   }
 
-  setToken(token: string) {
-    localStorage.setItem('token', token);
+  logout(): Observable<any> {
+    return from(signOut());
   }
 
-  getToken(): string | null {
-    return localStorage.getItem('token');
+  getCurrentUser(): Observable<any> {
+    return from(getCurrentUser());
   }
+
+  getUserRole(): Observable<string | null> {
+    return from(fetchAuthSession()).pipe(
+      map((session: any) => {
+        const idToken = session.tokens?.idToken?.payload;
+        if (!idToken) return null;
+
+        if (idToken['custom:role']) {
+          return idToken['custom:role'];
+        }
+
+        return null;
+      })
+    );
+  }
+
+  getSession(): Observable<any> {
+    return from(fetchAuthSession());
+  }
+
+  getIdToken(): Observable<string | null> {
+    return from(fetchAuthSession()).pipe(
+      map((session: any) => session.tokens?.idToken?.toString() ?? null)
+    );
+  }
+
 }
