@@ -6,9 +6,9 @@ from aws_cdk import (
     aws_cognito as cognito,
     aws_lambda as _lambda,
     aws_iam as iam,
-    Environment,
     Stack,
-    aws_dynamodb as dynamodb
+    aws_dynamodb as dynamodb,
+    aws_s3 as s3
 )
 
 class BackendStack(Stack):
@@ -39,20 +39,16 @@ class BackendStack(Stack):
             removal_policy=RemovalPolicy.DESTROY
         )
 
-        contentTable = dynamodb.Table(
-            self, "content",
-            partition_key=dynamodb.Attribute(name="contentType", type=dynamodb.AttributeType.STRING),
-            sort_key=dynamodb.Attribute(name="contentName", type=dynamodb.AttributeType.STRING),
-            table_name="content",
-            billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST
+        contentTable = dynamodb.Table.from_table_name(
+            self, "content-imported",
+            "content"
         )
 
-        genresTable = dynamodb.Table(
-            self, "genres",
-            partition_key=dynamodb.Attribute(name="genreName", type=dynamodb.AttributeType.STRING),
-            table_name="genres",
-            billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST
+        genresTable = dynamodb.Table.from_table_name(
+            self, "genres-imported",
+            "genres"
         )
+
 
         # 2. User Pool Client
         user_pool_client = cognito.UserPoolClient(
@@ -79,6 +75,30 @@ class BackendStack(Stack):
             pre_signup_lambda
         )
 
+        artist_bucket = s3.Bucket(
+            self, "ArtistImagesBucket",
+            bucket_name=f"artist-images-{self.account}-{self.region}",
+            removal_policy=RemovalPolicy.DESTROY,
+            auto_delete_objects=True,
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL
+        )
+
+        create_artist_lambda = _lambda.Function(
+            self, "CreateArtistLambda",
+            function_name="CreateArtistLambda",
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            handler="create_artist.handler",
+            code=_lambda.Code.from_asset("backend/lambdas/content"),
+            environment={
+                "BUCKET_NAME": artist_bucket.bucket_name,
+                "TABLE_NAME": contentTable.table_name
+            }
+        )
+
+        artist_bucket.grant_put(create_artist_lambda)
+        contentTable.grant_write_data(create_artist_lambda)
+
+
         # API Gateway
         api = apigw.RestApi(self, "MyApi")
 
@@ -93,6 +113,15 @@ class BackendStack(Stack):
         items.add_method(
             "GET",
             apigw.MockIntegration(),
+            authorization_type=apigw.AuthorizationType.COGNITO,
+            authorizer=authorizer
+        )
+
+        artists = api.root.add_resource("artists")
+
+        artists.add_method(
+            "POST",
+            apigw.LambdaIntegration(create_artist_lambda),
             authorization_type=apigw.AuthorizationType.COGNITO,
             authorizer=authorizer
         )

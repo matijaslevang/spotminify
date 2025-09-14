@@ -1,0 +1,114 @@
+:host {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh);
+  background-image: url("/login.jpg");
+}
+
+.artist-card {
+  max-width: 50vw;
+  width: 100%;
+  padding: 20px 30px;
+  border-radius: 12px;
+  background: var(--color-white-smoke);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  animation: fadeIn 0.6s ease-in-out;
+  font-family: "Fira Sans Condensed", sans-serif !important;
+  text-align: center;
+}
+
+.artist-card h2 {
+  color: var(--color-blush);
+  font-size: 2em;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+
+.artist-card form {
+  display: flex;
+  flex-direction: column;
+  width: 70%;
+  margin: auto;
+}
+
+.artist-card button.mat-raised-button {
+  padding: 12px 15px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: none;
+  transition: 0.3s ease;
+}
+
+.artist-card button.mat-raised-button:hover {
+  background: var(--color-blush);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(210, 88, 134, 0.4);
+}
+
+.artist-card .error-msg {
+  font-size: small;
+  color: #e53b35;
+  font-weight: 200;
+  margin: 0;
+  padding-bottom: 15px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dropzone {
+  border: 2px dashed var(--color-blush);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  align-items: center;
+  cursor: pointer;
+  transition: background 0.3s;
+  margin-bottom: 15px;
+  display: block; 
+
+  &:hover {
+    background-color: rgba(210, 88, 134, 0.1);
+  }
+
+  input[type="file"] {
+    display: none;
+  }
+
+  .dz-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    .dz-icon {
+      font-size: 48px;
+      margin-bottom: 10px;
+    }
+
+    p {
+      margin: 5px 0;
+    }
+
+    button.btn-primary {
+      margin: 5px 0;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      background-color: var(--color-blush);
+      color: white;
+      cursor: pointer;
+      transition: 0.3s;
+
+      &:hover {
+        background-color: #d25585;
+      }
+    }
+
+    small {
+      color: #888;
+    }
+  }
+}
