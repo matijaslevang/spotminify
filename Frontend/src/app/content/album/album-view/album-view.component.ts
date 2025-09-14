@@ -1,6 +1,7 @@
 import { Component, ElementRef, QueryList, ViewChildren } from '@angular/core';
 import { Album } from '../../models/model';
 import { ContentService } from '../../content.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-album-view',
@@ -16,14 +17,19 @@ export class AlbumViewComponent {
     songsUrls: [],
     rating: 4.5,
   }
+  albumName: string;
 
   @ViewChildren('audioPlayer') audioPlayers!: QueryList<ElementRef<HTMLAudioElement>>;
   isPlaying = false;
 
-  constructor(private contentService: ContentService) {}
+  constructor(private contentService: ContentService, private router: Router) {
+    const navigation = this.router.getCurrentNavigation();
+    this.albumName = navigation?.extras?.state?.['albumName'];
+    console.log(this.albumName)
+  }
 
   ngOnInit() {
-    this.contentService.getAlbum().subscribe({
+    this.contentService.getAlbum(this.albumName).subscribe({
       next: (album: Album) => {
         this.album = album;
       }
