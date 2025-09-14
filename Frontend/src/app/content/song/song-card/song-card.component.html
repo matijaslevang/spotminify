@@ -1,1 +1,5 @@
-<p>song-card works!</p>
+<div class="card-container" [style.--dominant-color]="dominantColor + 'cc'">
+    <img #songCardImage class="song-card-image" src={{song.imageUrl}} alt="image.png">
+    <span>{{song.name}}</span>
+    <button mat-button class="song-card-button" (click)="viewSong()">Listen</button>
+</div>
