@@ -19,6 +19,8 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { HomeComponent } from './layout/home/home.component';
+import { CommonModule } from '@angular/common';
+import { ContentModule } from './content/content.module';
 
 @NgModule({
   declarations: [
@@ -41,7 +43,9 @@ import { HomeComponent } from './layout/home/home.component';
     MatFormFieldModule,
     MatDatepickerModule,
     FormsModule,
-    ReactiveFormsModule 
+    ReactiveFormsModule,
+    CommonModule,
+    ContentModule
   ],
   providers: [
     provideAnimationsAsync(),
