@@ -1,5 +1,8 @@
 import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { ContentService } from '../../content.service';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-create-artist',
@@ -17,7 +20,7 @@ export class CreateArtistComponent {
     'Pop', 'Rock', 'Jazz', 'Hip-Hop', 'Classical', 'Electronic'
   ];
 
-  constructor(private fb: FormBuilder) {
+  constructor(private fb: FormBuilder, private contentService: ContentService, private snackBar: MatSnackBar, private router: Router) {
     this.formGroup = this.fb.group({
       name: ['', Validators.required],
       image: [null, Validators.required],
@@ -60,8 +63,6 @@ private handleFile(file: File) {
   this.imageError = null;
   this.formGroup.get('image')?.setValue(file);
 }
-
-
   createArtist() {
     if (!this.selectedFile) {
       this.imageError = "Artist image must be selected";
@@ -72,14 +73,39 @@ private handleFile(file: File) {
       return;
     }
 
-    const formData = new FormData();
-    formData.append('name', this.formGroup.get('name')?.value);
-    formData.append('biography', this.formGroup.get('biography')?.value);
-    formData.append('genres', JSON.stringify(this.formGroup.get('genres')?.value));
-    formData.append('image', this.selectedFile!);
-    
-    (formData as any).forEach((value: any, key: string) => {
-      console.log(key, ':', value);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64String = (reader.result as string).split(",")[1];
+
+      const payload = {
+        name: this.formGroup.get('name')?.value,
+        biography: this.formGroup.get('biography')?.value,
+        genres: this.formGroup.get('genres')?.value,
+        image: base64String,
+        imageType: this.selectedFile!.type.split("/")[1]
+      };
+
+      this.contentService.createArtist(payload).subscribe({
+      next: (res: any) => {
+        console.log('Artist created:', res);
+        this.snackBar.open('Artist created successfully!', 'Close', {
+          duration: 3000
+        });
+        this.formGroup.reset();
+        this.selectedFile = null;
+        this.uploadedFileName = null;
+        this.router.navigate(['/home']);
+      },
+      error: (err) => {
+        console.error('Error creating artist:', err);
+        const message = err?.error?.error || 'Failed to create artist';
+        this.snackBar.open(message, 'Close', {
+          duration: 5000
+        });
+      }
     });
+    };
+
+    reader.readAsDataURL(this.selectedFile);
   }
 }
