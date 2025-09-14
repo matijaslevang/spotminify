@@ -1,0 +1,10 @@
+<div class="container">
+    <img class="album-image" src="https://m.media-amazon.com/images/I/71pxGj4RoVS._UF894,1000_QL80_.jpg" alt="" [class.spinning]="isPlaying">
+    <p class="album-name">{{album.name}} by {{album.artists}} - {{album.genres}}</p>
+    <div class="album-player" *ngFor="let songUrl of album.songsUrls">
+        <audio #audioPlayer controls (play)="onPlay(audioPlayer)" (pause)="onPause()" [src]="songUrl">
+            Your browser does not support the audio element.
+        </audio>
+    </div>
+</div>
+    
