@@ -17,14 +17,22 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
-import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { HomeComponent } from './layout/home/home.component';
+import { CommonModule } from '@angular/common';
+import { ReactiveFormsModule, FormsModule } from '@angular/forms';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { MatSelectModule } from '@angular/material/select';
+import { MatOptionModule } from '@angular/material/core';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatTabsModule } from '@angular/material/tabs';
 
+import { AdminComponent } from './features/admin/admin.component';
 @NgModule({
   declarations: [
     AppComponent,
     NavBarComponent,
-    HomeComponent
+    HomeComponent,
+    AdminComponent
   ],
   imports: [
     BrowserModule,
@@ -40,8 +48,14 @@ import { HomeComponent } from './layout/home/home.component';
     MatNativeDateModule,
     MatFormFieldModule,
     MatDatepickerModule,
+    ReactiveFormsModule, 
     FormsModule,
-    ReactiveFormsModule 
+    CommonModule,
+    MatSelectModule,
+    MatOptionModule,
+    MatTabsModule,
+    BrowserAnimationsModule,
+    MatSlideToggleModule
   ],
   providers: [
     provideAnimationsAsync(),
