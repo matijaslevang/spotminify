@@ -21,6 +21,8 @@ import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { HomeComponent } from './layout/home/home.component';
 import { CommonModule } from '@angular/common';
 import { ContentModule } from './content/content.module';
+import { MatSelectModule } from '@angular/material/select';
+import { MatOptionModule } from '@angular/material/core';
 
 @NgModule({
   declarations: [
@@ -45,7 +47,9 @@ import { ContentModule } from './content/content.module';
     FormsModule,
     ReactiveFormsModule,
     CommonModule,
-    ContentModule
+    ContentModule,
+    MatSelectModule,
+    MatOptionModule
   ],
   providers: [
     provideAnimationsAsync(),

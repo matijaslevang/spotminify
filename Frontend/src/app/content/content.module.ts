@@ -6,9 +6,14 @@ import { AlbumViewComponent } from './album/album-view/album-view.component';
 import { SongCardComponent } from './song/song-card/song-card.component';
 import { AlbumCardComponent } from './album/album-card/album-card.component';
 import { ArtistCardComponent } from './artist/artist-card/artist-card.component';
-import { MatButton } from "@angular/material/button";
-
-
+import { CreateArtistComponent } from './artist/create-artist/create-artist.component';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatOptionModule } from '@angular/material/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 
 @NgModule({
   declarations: [
@@ -17,16 +22,25 @@ import { MatButton } from "@angular/material/button";
     AlbumViewComponent,
     SongCardComponent,
     AlbumCardComponent,
-    ArtistCardComponent
+    ArtistCardComponent,
+    CreateArtistComponent
   ],
-  imports: [
-    CommonModule,
-    MatButton
-],
   exports: [
     SongCardComponent,
     AlbumCardComponent,
     ArtistCardComponent,
+    CreateArtistComponent
+  ],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    MatOptionModule,
+    MatButtonModule,
+    MatIconModule
   ]
 })
 export class ContentModule { }
