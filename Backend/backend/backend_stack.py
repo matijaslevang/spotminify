@@ -44,6 +44,7 @@ class BackendStack(Stack):
 
         pre_signup_lambda = _lambda.Function(
             self, "PreSignUpLambda",
+            function_name= "PreSignUpLambda",
             runtime=_lambda.Runtime.PYTHON_3_9,
             handler="pre_signup.handler",
             code=_lambda.Code.from_asset("backend/lambdas/auth")
