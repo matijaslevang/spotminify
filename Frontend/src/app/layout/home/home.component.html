@@ -1,18 +1,27 @@
 <div class="container">
     <div class="artist-column">
-        <div *ngFor="let artist of recommendedArtists">
-            <app-artist-card [artist]="artist" ></app-artist-card>
+        <h2>Recommended artists</h2>
+        <div class="scrollable">
+            <div *ngFor="let artist of recommendedArtists">
+                <app-artist-card [artist]="artist" ></app-artist-card>
+            </div>
         </div>
     </div>
     <div class="song-album-column">
         <div class="song-row">
-            <div *ngFor="let song of recommendedSongs">
-                <app-song-card [song]="song"></app-song-card>
+            <h2>Recommended songs</h2>
+            <div class="scrollable">
+                <div *ngFor="let song of recommendedSongs">
+                    <app-song-card [song]="song"></app-song-card>
+                </div>
             </div>
         </div>
         <div class="album-row">
-            <div *ngFor="let album of recommendedAlbums">
-                <app-album-card [album]="album"></app-album-card>
+            <h2>Recommended albums</h2>
+            <div class="scrollable">
+                <div *ngFor="let album of recommendedAlbums">
+                    <app-album-card [album]="album"></app-album-card>
+                </div>
             </div>
         </div>
     </div>

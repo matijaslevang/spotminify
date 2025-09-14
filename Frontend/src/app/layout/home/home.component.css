@@ -10,9 +10,13 @@
 .artist-column {
     width: 50%;
     padding: 10px;
-    overflow-y: auto;
     box-sizing: border-box;
     border-right: 1px solid #ccc;
+    text-align: center;
+}
+
+.scrollable {
+    overflow-y: auto;
 }
 
 /* Right side: songs and albums stacked */
@@ -20,9 +24,14 @@
     width: 50%;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
     padding: 10px;
     box-sizing: border-box;
+    text-align: center;
+}
+
+h2 {
+  font-size: 40px;
+  margin-top: 10px;  
 }
 
 /* Horizontal scroll for songs */
@@ -31,7 +40,6 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
-    overflow-x: auto;
     padding-bottom: 10px;
 }
 
@@ -40,15 +48,13 @@
     flex: 1;
     display: flex;
     flex-direction: column;
+    height: 45vh;
     gap: 10px;
-    overflow-x: auto;
     padding-top: 10px;
 }
 
 /* Optional: Style scrollbars */
-.song-row::-webkit-scrollbar,
-.album-row::-webkit-scrollbar,
-.artist-column::-webkit-scrollbar {
+.scrollable::-webkit-scrollbar {
     height: 6px;
     width: 6px;
 }
