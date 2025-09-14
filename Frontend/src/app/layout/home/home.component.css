@@ -1,0 +1,54 @@
+.container {
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    flex-direction: row;
+    overflow: hidden;
+}
+
+/* Left side: artist column */
+.artist-column {
+    width: 50%;
+    padding: 10px;
+    overflow-y: auto;
+    box-sizing: border-box;
+    border-right: 1px solid #ccc;
+}
+
+/* Right side: songs and albums stacked */
+.song-album-column {
+    width: 50%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+/* Horizontal scroll for songs */
+.song-row {
+    height: 45vh;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 10px;
+}
+
+/* Horizontal scroll for albums */
+.album-row {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow-x: auto;
+    padding-top: 10px;
+}
+
+/* Optional: Style scrollbars */
+.song-row::-webkit-scrollbar,
+.album-row::-webkit-scrollbar,
+.artist-column::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+}
