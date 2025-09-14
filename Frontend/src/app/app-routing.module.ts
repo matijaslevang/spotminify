@@ -12,10 +12,10 @@ const routes: Routes = [
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
   { path: 'home', component:HomeComponent },
-  { path: '**', redirectTo: 'home' },
   { path: 'artist', component: ArtistViewComponent },
   { path: 'song', component: SongViewComponent },
   { path: 'album', component: AlbumViewComponent },
+  { path: '**', redirectTo: 'home' },
 ];
 
 @NgModule({
