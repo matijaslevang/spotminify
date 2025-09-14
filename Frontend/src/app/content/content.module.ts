@@ -4,6 +4,8 @@ import { ArtistViewComponent } from './artist/artist-view/artist-view.component'
 import { SongViewComponent } from './song/song-view/song-view.component';
 import { AlbumViewComponent } from './album/album-view/album-view.component';
 import { SongCardComponent } from './song/song-card/song-card.component';
+import { AlbumCardComponent } from './album/album-card/album-card.component';
+import { ArtistCardComponent } from './artist/artist-card/artist-card.component';
 import { CreateArtistComponent } from './artist/create-artist/create-artist.component';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -19,6 +21,14 @@ import { ReactiveFormsModule, FormsModule } from '@angular/forms';
     SongViewComponent,
     AlbumViewComponent,
     SongCardComponent,
+    AlbumCardComponent,
+    ArtistCardComponent,
+    CreateArtistComponent
+  ],
+  exports: [
+    SongCardComponent,
+    AlbumCardComponent,
+    ArtistCardComponent,
     CreateArtistComponent
   ],
   imports: [

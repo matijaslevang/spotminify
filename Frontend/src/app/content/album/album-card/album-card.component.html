@@ -1,0 +1,5 @@
+<div class="card-container" [style.--dominant-color]="dominantColor + 'cc'">
+    <img #albumCardImage class="album-card-image" src={{album.imageUrl}} alt="image.png">
+    <span>{{album.name}}</span>
+    <button mat-button class="album-card-button" (click)="viewAlbum()">Listen</button>
+</div>
