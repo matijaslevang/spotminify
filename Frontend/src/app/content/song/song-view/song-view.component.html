@@ -1,0 +1,7 @@
+<div class="container">
+    <img class="song-image" src={{song.imageUrl}} alt="" [class.spinning]="isPlaying">
+    <p class="song-name">{{song.name}} by {{song.artists}} - {{song.genres}}</p>
+    <audio class="song-player" controls (play)="onPlay()" (pause)="onPause()" [src]="song.songUrl">
+        Your browser does not support the audio element.
+    </audio>
+</div>

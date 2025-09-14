@@ -25,6 +25,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatOptionModule } from '@angular/material/core';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTabsModule } from '@angular/material/tabs';
+import { ContentModule } from './content/content.module';
 
 import { AdminComponent } from './features/admin/admin.component';
 @NgModule({
@@ -55,7 +56,9 @@ import { AdminComponent } from './features/admin/admin.component';
     MatOptionModule,
     MatTabsModule,
     BrowserAnimationsModule,
-    MatSlideToggleModule
+    MatSlideToggleModule,
+    CommonModule,
+    ContentModule
   ],
   providers: [
     provideAnimationsAsync(),

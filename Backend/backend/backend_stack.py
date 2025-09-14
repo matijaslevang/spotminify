@@ -4,7 +4,11 @@ from aws_cdk import (
     aws_s3 as s3, aws_dynamodb as ddb,
     aws_lambda as _lambda, aws_apigateway as apigw,
     aws_cognito as cognito,
-    aws_iam as iam
+    aws_iam as iam,
+    aws_iam as iam,
+    Environment,
+    Stack,
+    aws_dynamodb as dynamodb
 )
 
 class BackendStack(Stack):
@@ -86,6 +90,21 @@ class BackendStack(Stack):
         contents.add_resource("album").add_method("POST", apigw.LambdaIntegration(create_album), authorization_type=apigw.AuthorizationType.COGNITO,
             authorizer=authorizer)
        
+        contentTable = dynamodb.Table(
+            self, "content",
+            partition_key=dynamodb.Attribute(name="contentType", type=dynamodb.AttributeType.STRING),
+            sort_key=dynamodb.Attribute(name="contentName", type=dynamodb.AttributeType.STRING),
+            table_name="content",
+            billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST
+        )
+
+        genresTable = dynamodb.Table(
+            self, "genres",
+            partition_key=dynamodb.Attribute(name="genreName", type=dynamodb.AttributeType.STRING),
+            table_name="genres",
+            billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST
+        )
+
         # 2. User Pool Client
         user_pool_client = cognito.UserPoolClient(
             self, "NewUserPoolClient",
@@ -119,4 +138,3 @@ class BackendStack(Stack):
             authorization_type=apigw.AuthorizationType.COGNITO,
             authorizer=authorizer
         )
-
