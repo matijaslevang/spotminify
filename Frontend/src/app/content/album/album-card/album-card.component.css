@@ -1,0 +1,42 @@
+.card-container {
+  position: relative;
+  width: auto;
+  border-radius: 10px;
+  margin: 10px;
+  padding: 10px;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  overflow: hidden;
+  color: white;
+}
+
+.card-container::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: var(--dominant-color, #000000cc);
+  filter: blur(10px);
+  z-index: 0;
+  transition: background-color 0.3s ease;
+}
+
+.card-container > * {
+  position: relative;
+  z-index: 1;
+}
+
+.album-card-image {
+  width: 75px;
+  height: 75px;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.album-card-button {
+  background-color: white !important;
+  border: 2px solid black;
+  font-family: "Fira Sans Condensed", sans-serif !important;
+  font-weight: bold;
+}
