@@ -4,6 +4,9 @@ import { ArtistViewComponent } from './artist/artist-view/artist-view.component'
 import { SongViewComponent } from './song/song-view/song-view.component';
 import { AlbumViewComponent } from './album/album-view/album-view.component';
 import { SongCardComponent } from './song/song-card/song-card.component';
+import { AlbumCardComponent } from './album/album-card/album-card.component';
+import { ArtistCardComponent } from './artist/artist-card/artist-card.component';
+import { MatButton } from "@angular/material/button";
 
 
 
@@ -12,10 +15,18 @@ import { SongCardComponent } from './song/song-card/song-card.component';
     ArtistViewComponent,
     SongViewComponent,
     AlbumViewComponent,
-    SongCardComponent
+    SongCardComponent,
+    AlbumCardComponent,
+    ArtistCardComponent
   ],
   imports: [
-    CommonModule
+    CommonModule,
+    MatButton
+],
+  exports: [
+    SongCardComponent,
+    AlbumCardComponent,
+    ArtistCardComponent,
   ]
 })
 export class ContentModule { }
