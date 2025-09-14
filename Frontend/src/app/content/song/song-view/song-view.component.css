@@ -1,0 +1,39 @@
+.song-image {
+  width: 350px;
+  height: 350px;
+  object-fit: cover;
+  border-radius: 50%;
+  margin-top: 30px;
+  animation: spin 120s linear infinite;
+  animation-play-state: paused;
+}
+
+.spinning {
+  animation-play-state: running;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.song-name {
+    font-size: 40px;
+    padding-top: 20px;
+    font-weight: bold;
+}
+
+.song-player {
+    margin-top: 20px;
+}
+
+.container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
