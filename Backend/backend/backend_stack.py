@@ -5,10 +5,7 @@ from aws_cdk import (
     aws_lambda as _lambda, aws_apigateway as apigw,
     aws_cognito as cognito,
     aws_iam as iam,
-    aws_iam as iam,
     Environment,
-    Stack,
-    aws_dynamodb as dynamodb
 )
 
 class BackendStack(Stack):
@@ -44,66 +41,96 @@ class BackendStack(Stack):
         # )
 
         # topic.add_subscription(subs.SqsSubscription(queue))
+        
         audio = s3.Bucket(self,"Audio",removal_policy=RemovalPolicy.DESTROY,auto_delete_objects=True)
         images = s3.Bucket(self,"Images",removal_policy=RemovalPolicy.DESTROY,auto_delete_objects=True)
     
-        table = ddb.Table(self,"MusicTable",
-            partition_key=ddb.Attribute(name="PK", type=ddb.AttributeType.STRING),
-            table_name='content',
-            sort_key=ddb.Attribute(name="SK", type=ddb.AttributeType.STRING),
-            billing_mode=ddb.BillingMode.PAY_PER_REQUEST,
-            removal_policy=RemovalPolicy.DESTROY)
+        
+        # contentTable = dynamodb.Table(
+        #     self, "content",
+        #     partition_key=dynamodb.Attribute(name="contentType", type=dynamodb.AttributeType.STRING),
+        #     sort_key=dynamodb.Attribute(name="contentName", type=dynamodb.AttributeType.STRING),
+        #     table_name="content",
+        #     billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST
+        # )
 
-        get_url = _lambda.Function(self,"GetUploadUrl",
-            runtime=_lambda.Runtime.PYTHON_3_11, handler="get_upload_url.handler",
-            function_name="GetUploadUrl",
-            code=_lambda.Code.from_asset("backend/post-content"), timeout=Duration.seconds(10),
-            environment={"AUDIO_BUCKET":audio.bucket_name,"IMAGES_BUCKET":images.bucket_name})
-        audio.grant_put(get_url); images.grant_put(get_url)
+        # genresTable = dynamodb.Table(
+        #     self, "genres",
+        #     partition_key=dynamodb.Attribute(name="genreName", type=dynamodb.AttributeType.STRING),
+        #     table_name="genres",
+        #     billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST
+        # )
+        
+        contentTable = ddb.Table.from_table_name(self, "ContentTableImport", "content")
+
+        genresTable  = ddb.Table.from_table_name(self, "GenresTableImport", "genres")
+        
+
+        # get_url = _lambda.Function(self,"GetUploadUrl",
+        #     runtime=_lambda.Runtime.PYTHON_3_11, handler="get_upload_url.handler",
+        #     function_name="GetUploadUrl",
+        #     code=_lambda.Code.from_asset("backend/post-content"), timeout=Duration.seconds(10),
+        #     environment={"AUDIO_BUCKET":audio.bucket_name,"IMAGES_BUCKET":images.bucket_name})
+        #audio.grant_put(get_url); 
+        #images.grant_put(get_url)
 
         create_single = _lambda.Function(self,"CreateSingle",
             runtime=_lambda.Runtime.PYTHON_3_11, handler="create_single.handler",
             function_name="CreateSingle",
             code=_lambda.Code.from_asset("backend/post-content"), timeout=Duration.seconds(10),
-            environment={"TABLE":table.table_name})
+            environment={"TABLE":contentTable.table_name})
         create_album  = _lambda.Function(self,"CreateAlbum",
             function_name="CreateAlbum",
             runtime=_lambda.Runtime.PYTHON_3_11, handler="create_album.handler",
             code=_lambda.Code.from_asset("backend/post-content"), timeout=Duration.seconds(10),
-            environment={"TABLE":table.table_name})
-        table.grant_write_data(create_single); table.grant_write_data(create_album)
+            environment={"TABLE":contentTable.table_name})
+        contentTable.grant_write_data(create_single); 
+        contentTable.grant_write_data(create_album)
         
         # API Gateway
         api = apigw.RestApi(self, "MyApi")
-
+        api = apigw.RestApi(
+            self, "MyApi",
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_origins=apigw.Cors.ALL_ORIGINS,
+                allow_methods=["GET", "POST", "OPTIONS"],
+                allow_headers=apigw.Cors.DEFAULT_HEADERS,
+            ),
+        )
+    
         # Cognito Authorizer
         authorizer = apigw.CognitoUserPoolsAuthorizer(
             self, "MyAPIAuthorizer",
             cognito_user_pools=[self.user_pool]
         )
+        
+        # /upload-url
+        # r_upload = api.root.add_resource("upload-url")
+        # r_upload.add_method(
+        #     "POST",
+        #     apigw.LambdaIntegration(get_url),
+        #     authorization_type=apigw.AuthorizationType.COGNITO,
+        #     authorizer=authorizer,
+        # )
 
-        api.root.add_resource("upload-url").add_method("POST", apigw.LambdaIntegration(get_url), authorization_type=apigw.AuthorizationType.COGNITO,
-            authorizer=authorizer)
-        contents = api.root.add_resource("contents")
-        contents.add_resource("single").add_method("POST", apigw.LambdaIntegration(create_single), authorization_type=apigw.AuthorizationType.COGNITO,
-            authorizer=authorizer)
-        contents.add_resource("album").add_method("POST", apigw.LambdaIntegration(create_album), authorization_type=apigw.AuthorizationType.COGNITO,
-            authorizer=authorizer)
+
+        r_contents = api.root.add_resource("contents")
+        r_single = r_contents.add_resource("single")
+        r_album = r_contents.add_resource("album")
+
+        r_single.add_method(
+            "POST",
+            apigw.LambdaIntegration(create_single),
+            authorization_type=apigw.AuthorizationType.COGNITO,
+            authorizer=authorizer,
+        )
+        r_album.add_method(
+            "POST",
+            apigw.LambdaIntegration(create_album),
+            authorization_type=apigw.AuthorizationType.COGNITO,
+            authorizer=authorizer,
+        )
        
-        contentTable = dynamodb.Table(
-            self, "content",
-            partition_key=dynamodb.Attribute(name="contentType", type=dynamodb.AttributeType.STRING),
-            sort_key=dynamodb.Attribute(name="contentName", type=dynamodb.AttributeType.STRING),
-            table_name="content",
-            billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST
-        )
-
-        genresTable = dynamodb.Table(
-            self, "genres",
-            partition_key=dynamodb.Attribute(name="genreName", type=dynamodb.AttributeType.STRING),
-            table_name="genres",
-            billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST
-        )
 
         # 2. User Pool Client
         user_pool_client = cognito.UserPoolClient(
