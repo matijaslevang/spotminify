@@ -145,10 +145,20 @@ export class ContentService {
     })
   }
 
-createArtist(payload: any): Observable<any> {
+  createArtist(payload: any): Observable<any> {
     return this.httpClient.post(`${environment.apiUrl}/artists`, payload, {
       headers: { 'Content-Type': 'application/json' }
     });
+  }
+
+  getFilteredContentByGenre(genre: any): Observable<any> {
+    return of({resultAlbums: this.ALBUMS.filter(v => v.genres.includes(genre)), resultArtists: this.ARTISTS.filter(v => v.genres.includes(genre)), resultSongs: this.SONGS.filter(v => v.genres.includes(genre))})
+    //return this.httpClient.get(`${environment.apiUrl}/filter`, genre)
+  }
+
+  getAllGenres(): Observable<any> {
+    return of(['AAAAAAAA', 'Indie Pop', 'Dream Pop', 'Hip Hop', 'Rap', 'Pop', 'Soul', 'Indie Rock', 'Alternative', 'Electropop'])
+    //return this.httpClient.get(`${environment.apiUrl}/genres`)
   }
 
 }

@@ -23,12 +23,14 @@ import { CommonModule } from '@angular/common';
 import { ContentModule } from './content/content.module';
 import { MatSelectModule } from '@angular/material/select';
 import { MatOptionModule } from '@angular/material/core';
+import { DiscoverPageComponent } from './layout/discover-page/discover-page.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     NavBarComponent,
-    HomeComponent
+    HomeComponent,
+    DiscoverPageComponent
   ],
   imports: [
     BrowserModule,

@@ -1,0 +1,50 @@
+<div class="container">
+    <div class="filter-container">
+        <form [formGroup]="filterForm" (submit)="applyFilters(); $event.preventDefault()">
+            <h2>Filters</h2>
+            <mat-form-field appearance="outline" class="top-margin">
+                <mat-label>Choose a Genre</mat-label>
+                <mat-select formControlName="genre">
+                    <mat-option *ngFor="let genre of genres" [value]="genre">{{ genre }}</mat-option>
+                </mat-select>
+                <mat-error *ngIf="filterForm.get('genre').hasError('required') && filterForm.get('genre').touched">
+                    Genre is required
+                </mat-error>
+            </mat-form-field>
+
+            <button mat-button class="btn-primary top-margin" type="submit">Filter</button>
+        </form>
+    </div>
+    <h2 *ngIf="!attemptedSearch" class="center">Use the filter to begin looking for songs!</h2>
+    <div *ngIf="attemptedSearch" class="results-container">
+        <div class="artist-column">
+            <h2>Artists</h2>
+            <h2 *ngIf="resultArtists.length === 0" class="center gray">No artists found for this genre</h2>
+            <div *ngIf="resultArtists.length > 0" class="scrollable">
+                <div *ngFor="let artist of resultArtists">
+                    <app-artist-card [artist]="artist" ></app-artist-card>
+                </div>
+            </div>
+        </div>
+    <div class="song-album-column">
+        <div class="song-row">
+            <h2>Songs</h2>
+            <h2 *ngIf="resultSongs.length === 0" class="center gray">No songs found for this genre</h2>
+            <div *ngIf="resultSongs.length > 0" class="scrollable">
+                <div *ngFor="let song of resultSongs">
+                    <app-song-card [song]="song"></app-song-card>
+                </div>
+            </div>
+        </div>
+        <div class="album-row">
+            <h2>Albums</h2>
+            <h2 *ngIf="resultAlbums.length === 0" class="center gray">No albums found for this genre</h2>
+            <div *ngIf="resultAlbums.length > 0" class="scrollable">
+                <div *ngFor="let album of resultAlbums">
+                    <app-album-card [album]="album"></app-album-card>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+</div>
