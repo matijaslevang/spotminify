@@ -138,11 +138,12 @@ export class ContentService {
   }
 
   getRecommendedFeed(): Observable<any> {
-    return of({
+    /*return of({
       recommendedArtists: this.ARTISTS,
       recommendedAlbums: this.ALBUMS,
       recommendedSongs: this.SONGS
-    })
+    })*/
+    return this.httpClient.get(`${environment.apiUrl}/feed`)
   }
 
   createArtist(payload: any): Observable<any> {
