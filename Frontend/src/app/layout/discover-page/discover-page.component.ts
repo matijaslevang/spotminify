@@ -13,6 +13,7 @@ export class DiscoverPageComponent {
   resultSongs: Song[] = []
   resultArtists: Artist[] = []
   resultAlbums: Album[] = []
+  mySubscribedGenreIds = new Set<string>();
   
   genres: Genre[] = []
 
@@ -32,6 +33,17 @@ export class DiscoverPageComponent {
         this.genres = genres;
       }
     })
+    this.contentService.getMySubscriptions().subscribe({
+      next: (subscriptions) => {
+        this.mySubscribedGenreIds = new Set(
+          subscriptions
+            .filter(sub => sub.subscriptionType === 'GENRE')
+            .map(sub => sub.targetId)
+        );
+        console.log(this.mySubscribedGenreIds)
+      },
+      error: (err) => console.error("Could not load user's subscriptions", err)
+    });
   }
 
   applyFilters(): void {
@@ -49,6 +61,10 @@ export class DiscoverPageComponent {
     
   }
 
+  isSubscribedTo(genreId: string): boolean {
+    return this.mySubscribedGenreIds.has(genreId);
+  }
+
   subscribeToGenre(): void {
     const selectedGenre = this.filterForm.get('genre')?.value;
 
@@ -64,6 +80,7 @@ export class DiscoverPageComponent {
 
     this.contentService.subscribe(payload).subscribe({
       next: () => {
+        this.mySubscribedGenreIds.add(selectedGenre.genreId);
         this.snackBar.open(`Successfully subscribed to ${selectedGenre.genreName}!`, 'Close', {
           duration: 3000,
           panelClass: ['success-snackbar']
@@ -76,6 +93,21 @@ export class DiscoverPageComponent {
           duration: 5000,
           panelClass: ['error-snackbar']
         });
+      }
+    });
+  }
+  unsubscribeFromGenre(): void {
+    const selectedGenre = this.filterForm.get('genre')?.value;
+    if (!selectedGenre) return;
+
+    this.contentService.unsubscribe(selectedGenre.genreId).subscribe({
+      next: () => {
+        this.mySubscribedGenreIds.delete(selectedGenre.genreId);
+        this.snackBar.open(`Unsubscribed from ${selectedGenre.genreName}`, 'Close', { duration: 3000 });
+      },
+      error: (err) => {
+        console.error('Unsubscribe error:', err);
+        this.snackBar.open('Failed to unsubscribe.', 'Close', { duration: 5000 });
       }
     });
   }

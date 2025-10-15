@@ -421,9 +421,27 @@ class BackendStack(Stack):
             "subscriptions",
             default_cors_preflight_options=apigw.CorsOptions(
                 allow_origins=apigw.Cors.ALL_ORIGINS,
-                allow_methods=["POST", "DELETE", "OPTIONS"],
-                allow_headers=["Content-Type", "Authorization"]
+                allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+                allow_headers=["Content-Type", "Authorization", "X-Api-Key"]
             )
+        )
+
+        get_subscriptions_lambda = _lambda.Function(
+            self, "GetSubscriptionsLambda",
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            handler="get_subscriptions.handler",
+            code=_lambda.Code.from_asset("backend/lambdas/subscriptions"),
+            environment={
+                "SUBSCRIPTIONS_TABLE_NAME": table_subscriptions.table_name
+            }
+        )
+        table_subscriptions.grant_read_data(get_subscriptions_lambda)
+
+        subscriptions_resource.add_method(
+            "GET",
+            apigw.LambdaIntegration(get_subscriptions_lambda),
+            authorization_type=apigw.AuthorizationType.COGNITO,
+            authorizer=authorizer
         )
 
         subscriptions_resource.add_method(
