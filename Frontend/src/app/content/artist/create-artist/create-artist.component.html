@@ -40,8 +40,8 @@
     <mat-form-field appearance="outline" class="full-width">
       <mat-label>Genres</mat-label>
       <mat-select formControlName="genres" multiple>
-        <mat-option *ngFor="let genre of availableGenres" [value]="genre">
-          {{ genre }}
+        <mat-option *ngFor="let genre of availableGenres" [value]="genre.genreId">
+          {{ genre.genreName }}
         </mat-option>
       </mat-select>
       <mat-error *ngIf="formGroup.controls['genres'].invalid && formGroup.controls['genres'].touched">

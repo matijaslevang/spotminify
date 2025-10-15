@@ -22,3 +22,8 @@ export interface Album {
     songsUrls: string[],
     rating: number,
 }
+
+export interface Genre {
+  genreId: string;
+  genreName: string;
+}

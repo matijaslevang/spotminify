@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
-import { Album, Artist, Song } from './models/model';
+import { Album, Artist, Genre, Song } from './models/model';
 import { environment } from '../../enviroment';
 
 @Injectable({
@@ -150,6 +150,9 @@ export class ContentService {
     return this.httpClient.post(`${environment.apiUrl}/artists`, payload, {
       headers: { 'Content-Type': 'application/json' }
     });
+  }
+  getGenres(): Observable<Genre[]> {
+    return this.httpClient.get<Genre[]>(`${environment.apiUrl}/genres`);
   }
 
   getFilteredContentByGenre(genre: any): Observable<any> {

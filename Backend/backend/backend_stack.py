@@ -10,8 +10,10 @@ from aws_cdk import (
     Stack,
     aws_dynamodb as dynamodb,
     aws_s3 as s3,
-    aws_lambda_event_sources as lambda_event_sources
+    aws_lambda_event_sources as lambda_event_sources,
+    custom_resources as cr,
 )
+import uuid
 
 class BackendStack(Stack):
 
@@ -98,16 +100,56 @@ class BackendStack(Stack):
             removal_policy=RemovalPolicy.DESTROY
         )
 
+        table_artists = dynamodb.Table(
+            self, "Artists",
+            partition_key=dynamodb.Attribute(name="artistId", type=dynamodb.AttributeType.STRING),
+            removal_policy=RemovalPolicy.DESTROY
+        )
+
         contentTable = dynamodb.Table.from_table_name(
             self, "content-imported",
             "content"
         )
 
-        genresTable = dynamodb.Table.from_table_name(
-            self, "genres-imported",
-            "genres"
+        table_genres = dynamodb.Table(
+            self, "Genres",
+            partition_key=dynamodb.Attribute(name="genreId", type=dynamodb.AttributeType.STRING),
+            removal_policy=RemovalPolicy.DESTROY
         )
 
+        initial_genres = [
+            'Pop', 'Rock', 'Jazz', 'Hip-Hop', 'Classical', 'Electronic', 'Lo-Fi', 'R&B', 'Metal'
+        ]
+
+        genre_items = [
+            {
+                'PutRequest': {
+                    'Item': {
+                        'genreId': {'S': str(uuid.uuid4())},
+                        'genreName': {'S': genre}}
+                }
+            } for genre in initial_genres
+        ]
+
+        genre_seeder = cr.AwsCustomResource(
+            self, "GenresSeeder",
+            on_create=cr.AwsSdkCall(
+                service="DynamoDB",
+                action="batchWriteItem",
+                parameters={
+                    "RequestItems": {
+                        table_genres.table_name: genre_items
+                    }
+                },
+                physical_resource_id=cr.PhysicalResourceId.of("GenresSeederResourceId")
+            ),
+            policy=cr.AwsCustomResourcePolicy.from_statements([
+                iam.PolicyStatement(
+                    actions=["dynamodb:BatchWriteItem"],
+                    resources=[table_genres.table_arn]
+                )
+            ])
+        )
 
         # 2. User Pool Client
         user_pool_client = cognito.UserPoolClient(
@@ -150,12 +192,23 @@ class BackendStack(Stack):
             code=_lambda.Code.from_asset("backend/lambdas/content"),
             environment={
                 "BUCKET_NAME": artist_bucket.bucket_name,
-                "TABLE_NAME": contentTable.table_name
+                "TABLE_NAME": table_artists.table_name
             }
         )
 
+        get_genres_lambda = _lambda.Function(
+            self, "GetGenresLambda",
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            handler="get_genres.handler",
+            code=_lambda.Code.from_asset("backend/lambdas/content"),
+            environment={
+                "TABLE_NAME": table_genres.table_name
+            }
+        )
+
+        table_genres.grant_read_data(get_genres_lambda)
         artist_bucket.grant_put(create_artist_lambda)
-        contentTable.grant_write_data(create_artist_lambda)
+        table_artists.grant_write_data(create_artist_lambda)
 
 
         # API Gateway
@@ -176,7 +229,25 @@ class BackendStack(Stack):
             authorizer=authorizer
         )
 
-        artists = api.root.add_resource("artists")
+        genres_resource = api.root.add_resource(
+            "genres",
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_origins=apigw.Cors.ALL_ORIGINS,
+                allow_methods=["GET", "OPTIONS"],
+                allow_headers=["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key"]
+            )
+        )
+        genres_resource.add_method(
+            "GET",
+            apigw.LambdaIntegration(get_genres_lambda)
+        )
+
+        artists = api.root.add_resource("artists",
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_origins=apigw.Cors.ALL_ORIGINS,
+                allow_methods=["GET", "POST", "OPTIONS"],
+                allow_headers=["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key"]
+            ))
 
         artists.add_method(
             "POST",
@@ -185,7 +256,12 @@ class BackendStack(Stack):
             authorizer=authorizer
         )
 
-        feed = api.root.add_resource("feed")
+        feed = api.root.add_resource("feed",
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_origins=apigw.Cors.ALL_ORIGINS,
+                allow_methods=["GET", "OPTIONS"],
+                allow_headers=["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key"]
+            ))
 
         get_feed_lambda = _lambda.Function(
             self, "GetFeedLambda",
