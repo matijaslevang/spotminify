@@ -5,7 +5,7 @@
             <mat-form-field appearance="outline" class="top-margin">
                 <mat-label>Choose a Genre</mat-label>
                 <mat-select formControlName="genre">
-                    <mat-option *ngFor="let genre of genres" [value]="genre">{{ genre }}</mat-option>
+                    <mat-option *ngFor="let genre of genres" [value]="genre">{{ genre.genreName }}</mat-option>
                 </mat-select>
                 <mat-error *ngIf="filterForm.get('genre').hasError('required') && filterForm.get('genre').touched">
                     Genre is required
@@ -13,6 +13,27 @@
             </mat-form-field>
 
             <button mat-button class="btn-primary top-margin" type="submit">Filter</button>
+            <div *ngIf="filterForm.get('genre')?.value" class="subscription-section">
+            <h3>Selected Genre</h3>
+            <p class="genre-name">{{ filterForm.get('genre')?.value?.genreName }}</p>
+            <button
+                *ngIf="isSubscribedTo(filterForm.get('genre')?.value?.genreId)"
+                mat-flat-button
+                color="warn"
+                class="btn-primary btn-subscribe" 
+                type="button" 
+                (click)="unsubscribeFromGenre()">
+                Unsubscribe
+            </button>
+            <button
+                *ngIf="!isSubscribedTo(filterForm.get('genre')?.value?.genreId)"
+                mat-button
+                class="btn-primary btn-subscribe" 
+                type="button" 
+                (click)="subscribeToGenre()">
+                Subscribe
+            </button>
+        </div>
         </form>
     </div>
     <h2 *ngIf="!attemptedSearch" class="center">Use the filter to begin looking for songs!</h2>

@@ -12,6 +12,8 @@ from aws_cdk import (
     aws_s3 as s3,
     aws_lambda_event_sources as lambda_event_sources,
     custom_resources as cr,
+    aws_sns as sns,
+    aws_sns_subscriptions as sns_subscriptions
 )
 import uuid
 
@@ -43,34 +45,17 @@ class BackendStack(Stack):
             removal_policy=RemovalPolicy.DESTROY
         )
 
-        table_genre_subscriptions = dynamodb.Table(
-            self, "GenreSubscriptions",
+        table_subscriptions = dynamodb.Table(
+            self, "Subscriptions",
             partition_key=dynamodb.Attribute(name="username", type=dynamodb.AttributeType.STRING),
-            sort_key=dynamodb.Attribute(name="genreName", type=dynamodb.AttributeType.STRING),
-            removal_policy=RemovalPolicy.DESTROY,
-            global_secondary_indexes=[
-                dynamodb.GlobalSecondaryIndex(
-                    index_name="ByGenreName",
-                    partition_key=dynamodb.Attribute(name="genreName", type=dynamodb.AttributeType.STRING),
-                    sort_key=dynamodb.Attribute(name="username", type=dynamodb.AttributeType.STRING),
-                    projection_type=dynamodb.ProjectionType.ALL,
-                )
-            ]
+            sort_key=dynamodb.Attribute(name="targetId", type=dynamodb.AttributeType.STRING),
+            removal_policy=RemovalPolicy.DESTROY
         )
 
-        table_artist_subscriptions = dynamodb.Table(
-            self, "ArtistSubscriptions",
-            partition_key=dynamodb.Attribute(name="username", type=dynamodb.AttributeType.STRING),
-            sort_key=dynamodb.Attribute(name="artistId", type=dynamodb.AttributeType.STRING),
-            removal_policy=RemovalPolicy.DESTROY,
-            global_secondary_indexes=[
-                dynamodb.GlobalSecondaryIndex(
-                    index_name="ByArtistId",
-                    partition_key=dynamodb.Attribute(name="artistId", type=dynamodb.AttributeType.STRING),
-                    sort_key=dynamodb.Attribute(name="username", type=dynamodb.AttributeType.STRING),
-                    projection_type=dynamodb.ProjectionType.ALL,
-                )
-            ]
+        table_subscriptions.add_global_secondary_index(
+            index_name="by-target-id",
+            partition_key=dynamodb.Attribute(name="targetId", type=dynamodb.AttributeType.STRING),
+            sort_key=dynamodb.Attribute(name="username", type=dynamodb.AttributeType.STRING)
         )
 
         table_activity = dynamodb.Table(
@@ -372,4 +357,104 @@ class BackendStack(Stack):
 
         update_feed_specific_user_lambda.add_event_source(
             lambda_event_sources.SqsEventSource(update_feed_specific_user_queue)
+        )
+
+        # ----------------- SNS & Notifications -----------------
+
+        new_content_topic = sns.Topic(
+            self, "NewContentTopic",
+            topic_name="new-content-topic"
+        )
+
+        notification_queue = sqs.Queue(
+            self, "NotificationQueue",
+            queue_name="notification-queue",
+            removal_policy=RemovalPolicy.DESTROY
+        )
+
+        new_content_topic.add_subscription(
+            sns_subscriptions.SqsSubscription(notification_queue)
+        )
+
+        send_notifications_lambda = _lambda.Function(
+            self, "SendNotificationsLambda",
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            handler="send_notifications.handler",
+            code=_lambda.Code.from_asset("backend/lambdas/notifications"),
+            environment={
+                "SUBSCRIPTIONS_TABLE_NAME": table_subscriptions.table_name,
+                "GSI_NAME": "by-target-id"
+            }
+        )
+
+        send_notifications_lambda.add_event_source(
+            lambda_event_sources.SqsEventSource(notification_queue)
+        )
+
+        table_subscriptions.grant_read_data(send_notifications_lambda)
+        new_content_topic.grant_publish(create_artist_lambda)
+
+
+        subscribe_lambda = _lambda.Function(
+            self, "SubscribeLambda",
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            handler="subscribe.handler",
+            code=_lambda.Code.from_asset("backend/lambdas/subscriptions"),
+            environment={
+                "SUBSCRIPTIONS_TABLE_NAME": table_subscriptions.table_name
+            }
+        )
+        table_subscriptions.grant_write_data(subscribe_lambda)
+
+        unsubscribe_lambda = _lambda.Function(
+            self, "UnsubscribeLambda",
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            handler="unsubscribe.handler",
+            code=_lambda.Code.from_asset("backend/lambdas/subscriptions"),
+            environment={
+                "SUBSCRIPTIONS_TABLE_NAME": table_subscriptions.table_name
+            }
+        )
+        table_subscriptions.grant_write_data(unsubscribe_lambda)
+
+        subscriptions_resource = api.root.add_resource(
+            "subscriptions",
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_origins=apigw.Cors.ALL_ORIGINS,
+                allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+                allow_headers=["Content-Type", "Authorization", "X-Api-Key"]
+            )
+        )
+
+        get_subscriptions_lambda = _lambda.Function(
+            self, "GetSubscriptionsLambda",
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            handler="get_subscriptions.handler",
+            code=_lambda.Code.from_asset("backend/lambdas/subscriptions"),
+            environment={
+                "SUBSCRIPTIONS_TABLE_NAME": table_subscriptions.table_name
+            }
+        )
+        table_subscriptions.grant_read_data(get_subscriptions_lambda)
+
+        subscriptions_resource.add_method(
+            "GET",
+            apigw.LambdaIntegration(get_subscriptions_lambda),
+            authorization_type=apigw.AuthorizationType.COGNITO,
+            authorizer=authorizer
+        )
+
+        subscriptions_resource.add_method(
+            "POST",
+            apigw.LambdaIntegration(subscribe_lambda),
+            authorization_type=apigw.AuthorizationType.COGNITO,
+            authorizer=authorizer
+        )
+
+        subscription_target_resource = subscriptions_resource.add_resource("{targetId}")
+        subscription_target_resource.add_method(
+            "DELETE",
+            apigw.LambdaIntegration(unsubscribe_lambda),
+            authorization_type=apigw.AuthorizationType.COGNITO,
+            authorizer=authorizer
         )

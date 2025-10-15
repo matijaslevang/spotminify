@@ -1,13 +1,51 @@
-<div class="container">
-    <div class="bio">
-        <img class="bio-image" src={{artist.imageUrl}} alt="artist-image"/>
-        <span class="bio-name">{{artist.name}}</span>
-        <p class="bio-text">{{artist.bio}}</p>
-        <p class="bio-genres">{{artist.genres}}</p>
+<div class="container" *ngIf="!isLoading && artist">
+    
+    <div class="artist-hero-background">
+
+        <div class="artist-details-card">
+            <img class="artist-image" [src]="artist.imageUrl" [alt]="artist.name"/>
+            
+            <h1 class="artist-name">{{ artist.name }}</h1>
+            
+            <div class="genres-list">
+                <mat-chip-listbox aria-label="Artist genres">
+                    <mat-chip *ngFor="let genre of artist.genres">{{ genre }}</mat-chip>
+                </mat-chip-listbox>
+            </div>
+            
+            <p class="artist-bio">{{ artist.bio }}</p>
+
+            <div class="subscription-button-container">
+                <button *ngIf="!isSubscribedTo(artist.artistId)" (click)="subscribeToArtist()" mat-button>
+                    <mat-icon>person_add</mat-icon> Subscribe
+                </button>
+                <button *ngIf="isSubscribedTo(artist.artistId)" (click)="unsubscribeFromArtist()" mat-button>
+                    <mat-icon>person_remove</mat-icon> Unsubscribe
+                </button>
+            </div>
+        </div>
+
     </div>
-    <div class="songlist">
-        <p>song one</p>
-        <p>song two</p>
-        <p>song three</p>
+
+    <div class="content-container">
+        <div class="content-section">
+            <h2>Top Songs</h2>
+            <div class="song-list" *ngIf="artistSongs.length > 0; else noSongs">
+                <div class="placeholder-card" *ngFor="let song of [1,2,3,4]">Song Placeholder</div>
+            </div>
+            <ng-template #noSongs><p class="no-content-message">No songs found for this artist.</p></ng-template>
+        </div>
+
+        <div class="content-section">
+            <h2>Albums</h2>
+            <div class="album-list" *ngIf="artistAlbums.length > 0; else noAlbums">
+                <div class="placeholder-card" *ngFor="let album of [1,2,3]">Album Placeholder</div>
+            </div>
+            <ng-template #noAlbums><p class="no-content-message">No albums found for this artist.</p></ng-template>
+        </div>
     </div>
+</div>
+
+<div class="loading-container" *ngIf="isLoading">
+    <mat-spinner></mat-spinner>
 </div>

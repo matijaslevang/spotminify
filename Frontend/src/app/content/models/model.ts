@@ -1,4 +1,5 @@
 export interface Artist {
+    artistId?: any;
     name: string,
     bio: string,
     genres: string[],

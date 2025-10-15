@@ -8,6 +8,7 @@ import { SongViewComponent } from './content/song/song-view/song-view.component'
 import { AlbumViewComponent } from './content/album/album-view/album-view.component';
 import { CreateArtistComponent } from './content/artist/create-artist/create-artist.component';
 import { DiscoverPageComponent } from './layout/discover-page/discover-page.component';
+import { SubscriptionManagementComponent } from './layout/subscription-management/subscription-management.component';
 
 const routes: Routes = [
   { path: '', redirectTo: '/home', pathMatch: 'full' },
@@ -19,6 +20,7 @@ const routes: Routes = [
   { path: 'album', component: AlbumViewComponent },
   { path: 'create-artist', component: CreateArtistComponent },
   { path: 'discover', component: DiscoverPageComponent },
+  { path: 'my-subscriptions', component: SubscriptionManagementComponent },
   { path: '**', redirectTo: 'home' },
 ];
 
