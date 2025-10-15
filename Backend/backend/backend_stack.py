@@ -48,14 +48,14 @@ class BackendStack(Stack):
             partition_key=dynamodb.Attribute(name="username", type=dynamodb.AttributeType.STRING),
             sort_key=dynamodb.Attribute(name="genreName", type=dynamodb.AttributeType.STRING),
             removal_policy=RemovalPolicy.DESTROY,
-            # global_secondary_indexes=[
-            #     dynamodb.GlobalSecondaryIndex(
-            #         index_name="ByGenreName",
-            #         partition_key=dynamodb.Attribute(name="genreName", type=dynamodb.AttributeType.STRING),
-            #         sort_key=dynamodb.Attribute(name="username", type=dynamodb.AttributeType.STRING),
-            #         projection_type=dynamodb.ProjectionType.ALL,
-            #     )
-            # ]
+            global_secondary_indexes=[
+                dynamodb.GlobalSecondaryIndex(
+                    index_name="ByGenreName",
+                    partition_key=dynamodb.Attribute(name="genreName", type=dynamodb.AttributeType.STRING),
+                    sort_key=dynamodb.Attribute(name="username", type=dynamodb.AttributeType.STRING),
+                    projection_type=dynamodb.ProjectionType.ALL,
+                )
+            ]
         )
 
         table_artist_subscriptions = dynamodb.Table(
@@ -63,14 +63,14 @@ class BackendStack(Stack):
             partition_key=dynamodb.Attribute(name="username", type=dynamodb.AttributeType.STRING),
             sort_key=dynamodb.Attribute(name="artistId", type=dynamodb.AttributeType.STRING),
             removal_policy=RemovalPolicy.DESTROY,
-            # global_secondary_indexes=[
-            #     dynamodb.GlobalSecondaryIndex(
-            #         index_name="ByArtistId",
-            #         partition_key=dynamodb.Attribute(name="artistId", type=dynamodb.AttributeType.STRING),
-            #         sort_key=dynamodb.Attribute(name="username", type=dynamodb.AttributeType.STRING),
-            #         projection_type=dynamodb.ProjectionType.ALL,
-            #     )
-            # ]
+            global_secondary_indexes=[
+                dynamodb.GlobalSecondaryIndex(
+                    index_name="ByArtistId",
+                    partition_key=dynamodb.Attribute(name="artistId", type=dynamodb.AttributeType.STRING),
+                    sort_key=dynamodb.Attribute(name="username", type=dynamodb.AttributeType.STRING),
+                    projection_type=dynamodb.ProjectionType.ALL,
+                )
+            ]
         )
 
         table_activity = dynamodb.Table(
