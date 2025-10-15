@@ -196,6 +196,17 @@ class BackendStack(Stack):
             }
         )
 
+        get_genres_lambda = _lambda.Function(
+            self, "GetGenresLambda",
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            handler="get_genres.handler",
+            code=_lambda.Code.from_asset("backend/lambdas/content"),
+            environment={
+                "TABLE_NAME": table_genres.table_name
+            }
+        )
+
+        table_genres.grant_read_data(get_genres_lambda)
         artist_bucket.grant_put(create_artist_lambda)
         table_artists.grant_write_data(create_artist_lambda)
 
@@ -218,7 +229,25 @@ class BackendStack(Stack):
             authorizer=authorizer
         )
 
-        artists = api.root.add_resource("artists")
+        genres_resource = api.root.add_resource(
+            "genres",
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_origins=apigw.Cors.ALL_ORIGINS,
+                allow_methods=["GET", "OPTIONS"],
+                allow_headers=["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key"]
+            )
+        )
+        genres_resource.add_method(
+            "GET",
+            apigw.LambdaIntegration(get_genres_lambda)
+        )
+
+        artists = api.root.add_resource("artists",
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_origins=apigw.Cors.ALL_ORIGINS,
+                allow_methods=["GET", "POST", "OPTIONS"],
+                allow_headers=["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key"]
+            ))
 
         artists.add_method(
             "POST",
@@ -227,7 +256,12 @@ class BackendStack(Stack):
             authorizer=authorizer
         )
 
-        feed = api.root.add_resource("feed")
+        feed = api.root.add_resource("feed",
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_origins=apigw.Cors.ALL_ORIGINS,
+                allow_methods=["GET", "OPTIONS"],
+                allow_headers=["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key"]
+            ))
 
         get_feed_lambda = _lambda.Function(
             self, "GetFeedLambda",
