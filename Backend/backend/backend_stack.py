@@ -98,6 +98,12 @@ class BackendStack(Stack):
             removal_policy=RemovalPolicy.DESTROY
         )
 
+        table_artists = dynamodb.Table(
+            self, "Artists",
+            partition_key=dynamodb.Attribute(name="artistId", type=dynamodb.AttributeType.STRING),
+            removal_policy=RemovalPolicy.DESTROY
+        )
+
         contentTable = dynamodb.Table.from_table_name(
             self, "content-imported",
             "content"
@@ -150,12 +156,12 @@ class BackendStack(Stack):
             code=_lambda.Code.from_asset("backend/lambdas/content"),
             environment={
                 "BUCKET_NAME": artist_bucket.bucket_name,
-                "TABLE_NAME": contentTable.table_name
+                "TABLE_NAME": table_artists.table_name
             }
         )
 
         artist_bucket.grant_put(create_artist_lambda)
-        contentTable.grant_write_data(create_artist_lambda)
+        table_artists.grant_write_data(create_artist_lambda)
 
 
         # API Gateway
