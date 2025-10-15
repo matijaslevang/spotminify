@@ -17,6 +17,7 @@ def handler(event, context):
 
         body = json.loads(event.get("body", "{}"))
         target_id = body.get("targetId")
+        target_name = body.get("targetName")
         subscription_type = body.get("subscriptionType")
 
         if not target_id or not subscription_type:
@@ -26,6 +27,7 @@ def handler(event, context):
             Item={
                 'username': username,
                 'targetId': target_id,
+                'targetName': target_name,
                 'subscriptionType': subscription_type,
                 'subscribedAt': datetime.utcnow().isoformat()
             }

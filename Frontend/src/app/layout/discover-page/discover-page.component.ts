@@ -75,6 +75,7 @@ export class DiscoverPageComponent {
 
     const payload = {
       targetId: selectedGenre.genreId,
+      targetName: selectedGenre.genreName,
       subscriptionType: 'GENRE'
     };
 

@@ -24,13 +24,18 @@ import { ContentModule } from './content/content.module';
 import { MatSelectModule } from '@angular/material/select';
 import { MatOptionModule } from '@angular/material/core';
 import { DiscoverPageComponent } from './layout/discover-page/discover-page.component';
+import { SubscriptionManagementComponent } from './layout/subscription-management/subscription-management.component';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
+import {MatCardModule} from '@angular/material/card'; 
 
 @NgModule({
   declarations: [
     AppComponent,
     NavBarComponent,
     HomeComponent,
-    DiscoverPageComponent
+    DiscoverPageComponent,
+    SubscriptionManagementComponent
   ],
   imports: [
     BrowserModule,
@@ -51,7 +56,12 @@ import { DiscoverPageComponent } from './layout/discover-page/discover-page.comp
     CommonModule,
     ContentModule,
     MatSelectModule,
-    MatOptionModule
+    MatOptionModule,
+    MatButtonModule,
+    MatIconModule,
+    MatProgressSpinnerModule,
+    MatSnackBarModule,
+    MatCardModule
   ],
   providers: [
     provideAnimationsAsync(),
