@@ -10,8 +10,10 @@ from aws_cdk import (
     Stack,
     aws_dynamodb as dynamodb,
     aws_s3 as s3,
-    aws_lambda_event_sources as lambda_event_sources
+    aws_lambda_event_sources as lambda_event_sources,
+    custom_resources as cr,
 )
+import uuid
 
 class BackendStack(Stack):
 
@@ -46,14 +48,14 @@ class BackendStack(Stack):
             partition_key=dynamodb.Attribute(name="username", type=dynamodb.AttributeType.STRING),
             sort_key=dynamodb.Attribute(name="genreName", type=dynamodb.AttributeType.STRING),
             removal_policy=RemovalPolicy.DESTROY,
-            global_secondary_indexes=[
-                dynamodb.GlobalSecondaryIndex(
-                    index_name="ByGenreName",
-                    partition_key=dynamodb.Attribute(name="genreName", type=dynamodb.AttributeType.STRING),
-                    sort_key=dynamodb.Attribute(name="username", type=dynamodb.AttributeType.STRING),
-                    projection_type=dynamodb.ProjectionType.ALL,
-                )
-            ]
+            # global_secondary_indexes=[
+            #     dynamodb.GlobalSecondaryIndex(
+            #         index_name="ByGenreName",
+            #         partition_key=dynamodb.Attribute(name="genreName", type=dynamodb.AttributeType.STRING),
+            #         sort_key=dynamodb.Attribute(name="username", type=dynamodb.AttributeType.STRING),
+            #         projection_type=dynamodb.ProjectionType.ALL,
+            #     )
+            # ]
         )
 
         table_artist_subscriptions = dynamodb.Table(
@@ -61,14 +63,14 @@ class BackendStack(Stack):
             partition_key=dynamodb.Attribute(name="username", type=dynamodb.AttributeType.STRING),
             sort_key=dynamodb.Attribute(name="artistId", type=dynamodb.AttributeType.STRING),
             removal_policy=RemovalPolicy.DESTROY,
-            global_secondary_indexes=[
-                dynamodb.GlobalSecondaryIndex(
-                    index_name="ByArtistId",
-                    partition_key=dynamodb.Attribute(name="artistId", type=dynamodb.AttributeType.STRING),
-                    sort_key=dynamodb.Attribute(name="username", type=dynamodb.AttributeType.STRING),
-                    projection_type=dynamodb.ProjectionType.ALL,
-                )
-            ]
+            # global_secondary_indexes=[
+            #     dynamodb.GlobalSecondaryIndex(
+            #         index_name="ByArtistId",
+            #         partition_key=dynamodb.Attribute(name="artistId", type=dynamodb.AttributeType.STRING),
+            #         sort_key=dynamodb.Attribute(name="username", type=dynamodb.AttributeType.STRING),
+            #         projection_type=dynamodb.ProjectionType.ALL,
+            #     )
+            # ]
         )
 
         table_activity = dynamodb.Table(
@@ -109,11 +111,45 @@ class BackendStack(Stack):
             "content"
         )
 
-        genresTable = dynamodb.Table.from_table_name(
-            self, "genres-imported",
-            "genres"
+        table_genres = dynamodb.Table(
+            self, "Genres",
+            partition_key=dynamodb.Attribute(name="genreId", type=dynamodb.AttributeType.STRING),
+            removal_policy=RemovalPolicy.DESTROY
         )
 
+        initial_genres = [
+            'Pop', 'Rock', 'Jazz', 'Hip-Hop', 'Classical', 'Electronic', 'Lo-Fi', 'R&B', 'Metal'
+        ]
+
+        genre_items = [
+            {
+                'PutRequest': {
+                    'Item': {
+                        'genreId': {'S': str(uuid.uuid4())},
+                        'genreName': {'S': genre}}
+                }
+            } for genre in initial_genres
+        ]
+
+        genre_seeder = cr.AwsCustomResource(
+            self, "GenresSeeder",
+            on_create=cr.AwsSdkCall(
+                service="DynamoDB",
+                action="batchWriteItem",
+                parameters={
+                    "RequestItems": {
+                        table_genres.table_name: genre_items
+                    }
+                },
+                physical_resource_id=cr.PhysicalResourceId.of("GenresSeederResourceId")
+            ),
+            policy=cr.AwsCustomResourcePolicy.from_statements([
+                iam.PolicyStatement(
+                    actions=["dynamodb:BatchWriteItem"],
+                    resources=[table_genres.table_arn]
+                )
+            ])
+        )
 
         # 2. User Pool Client
         user_pool_client = cognito.UserPoolClient(
