@@ -165,4 +165,8 @@ export class ContentService {
     //return this.httpClient.get(`${environment.apiUrl}/genres`)
   }
 
+  subscribe(payload: { targetId: string, subscriptionType: string }): Observable<any> {
+    return this.httpClient.post(`${environment.apiUrl}/subscriptions`, payload);
+  }
+
 }
