@@ -27,14 +27,14 @@
   z-index: 1;
 }
 
-.song-card-image {
+.artist-card-image {
   width: 75px;
-  height: 75px;
+  height: 100px;
   object-fit: cover;
-  border-radius: 50%;
+  border-radius: 10px;
 }
 
-.song-card-button {
+.artist-card-button {
   background-color: white !important;
   border: 2px solid black;
   font-family: "Fira Sans Condensed", sans-serif !important;

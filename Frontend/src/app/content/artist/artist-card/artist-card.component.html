@@ -1,0 +1,5 @@
+<div class="card-container" [style.--dominant-color]="dominantColor + 'cc'">
+    <img #artistCardImage class="artist-card-image" src={{artist.imageUrl}} alt="image.png">
+    <span>{{artist.name}}</span>
+    <button mat-button class="artist-card-button" (click)="viewArtist()">View</button>
+</div>

@@ -28,6 +28,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { ContentModule } from './content/content.module';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { AdminComponent } from './features/admin/admin.component';
+
 @NgModule({
   declarations: [
     AppComponent,
@@ -59,7 +60,9 @@ import { AdminComponent } from './features/admin/admin.component';
     MatSlideToggleModule,
     CommonModule,
     ContentModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatSelectModule,
+    MatOptionModule
   ],
   providers: [
     provideAnimationsAsync(),
