@@ -1,41 +1,49 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
-import { Album, Artist, Song } from './models/model';
+import { map } from 'rxjs/operators';
+import { Album, Artist, Genre, Song } from './models/model';
 import { environment } from '../../enviroment';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ContentService {
+  // Mock subscriptions
+  private _mySubscriptions = new Set<string>();
   constructor(private httpClient: HttpClient) { }
 
   ARTISTS: Artist[] = [
     {
+      artistId: "artist-1",
       name: "Lana Del Rey",
-      bio: "Known for her nostalgic and cinematic sound, blending indie pop and dream pop influences.",
+      bio: "Known for her nostalgic and cinematic sound...",
       genres: ["Indie Pop", "Dream Pop"],
       imageUrl: "https://picsum.photos/id/1011/200/200"
     },
     {
+      artistId: "artist-2",
       name: "Kendrick Lamar",
-      bio: "Pulitzer-winning rapper known for his lyrical depth and powerful social commentary.",
+      bio: "Pulitzer-winning rapper known for his lyrical depth...",
       genres: ["Hip Hop", "Rap"],
       imageUrl: "https://picsum.photos/id/1027/200/200"
     },
     {
+      artistId: "artist-3",
       name: "Adele",
-      bio: "British singer famous for her emotional ballads and powerhouse vocals.",
+      bio: "British singer famous for her emotional ballads...",
       genres: ["Pop", "Soul"],
       imageUrl: "https://picsum.photos/id/1015/200/200"
     },
     {
+      artistId: "artist-4",
       name: "Arctic Monkeys",
-      bio: "English indie rock band known for clever lyrics and genre-bending albums.",
+      bio: "English indie rock band known for clever lyrics...",
       genres: ["Indie Rock", "Alternative"],
       imageUrl: "https://picsum.photos/id/1031/200/200"
     },
     {
+      artistId: "artist-5",
       name: "Billie Eilish",
       bio: "Known for her whispery vocals and moody electropop sound.",
       genres: ["Pop", "Electropop"],
@@ -129,6 +137,16 @@ export class ContentService {
     return of(this.ARTISTS.find(v => v.name === name))
   }
 
+  getSongsByArtist(artistName: string): Observable<Song[]> {
+    const songs = this.SONGS.filter(song => song.artists.includes(artistName));
+    return of(songs);
+  }
+
+  getAlbumsByArtist(artistName: string): Observable<Album[]> {
+    const albums = this.ALBUMS.filter(album => album.artists.includes(artistName));
+    return of(albums);
+  }
+
   getSong(name: string): Observable<Song> {
     return of(this.SONGS.find(v => v.name === name))
   }
@@ -138,17 +156,43 @@ export class ContentService {
   }
 
   getRecommendedFeed(): Observable<any> {
-    return of({
+    /*return of({
       recommendedArtists: this.ARTISTS,
       recommendedAlbums: this.ALBUMS,
       recommendedSongs: this.SONGS
-    })
+    })*/
+    return this.httpClient.get(`${environment.apiUrl}/feed`)
   }
 
-createArtist(payload: any): Observable<any> {
+  createArtist(payload: any): Observable<any> {
     return this.httpClient.post(`${environment.apiUrl}/artists`, payload, {
       headers: { 'Content-Type': 'application/json' }
     });
   }
+  getGenres(): Observable<Genre[]> {
+    return this.httpClient.get<Genre[]>(`${environment.apiUrl}/genres`);
+  }
+
+  getFilteredContentByGenre(genre: any): Observable<any> {
+    return of({resultAlbums: this.ALBUMS.filter(v => v.genres.includes(genre)), resultArtists: this.ARTISTS.filter(v => v.genres.includes(genre)), resultSongs: this.SONGS.filter(v => v.genres.includes(genre))})
+    //return this.httpClient.get(`${environment.apiUrl}/filter`, genre)
+  }
+
+  getAllGenres(): Observable<any> {
+    return of(['AAAAAAAA', 'Indie Pop', 'Dream Pop', 'Hip Hop', 'Rap', 'Pop', 'Soul', 'Indie Rock', 'Alternative', 'Electropop'])
+    //return this.httpClient.get(`${environment.apiUrl}/genres`)
+  }
+
+  getMySubscriptions(): Observable<any[]> {
+  return this.httpClient.get<any[]>(`${environment.apiUrl}/subscriptions`);
+}
+
+subscribe(payload: { targetId: string, subscriptionType: string }): Observable<any> {
+  return this.httpClient.post(`${environment.apiUrl}/subscriptions`, payload);
+}
+
+unsubscribe(targetId: string): Observable<any> {
+  return this.httpClient.delete(`${environment.apiUrl}/subscriptions/${targetId}`);
+}
 
 }

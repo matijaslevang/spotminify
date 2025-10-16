@@ -10,6 +10,8 @@ dynamodb = boto3.client("dynamodb")
 BUCKET = os.environ["BUCKET_NAME"]
 TABLE = os.environ["TABLE_NAME"]
 
+artist_id = str(uuid.uuid4())
+
 def handler(event, context):
     try:
         claims = event.get("requestContext", {}).get("authorizer", {}).get("claims", {})
@@ -49,11 +51,11 @@ def handler(event, context):
         dynamodb.put_item(
             TableName=TABLE,
             Item={
-                "contentType": {"S": "Artist"},
-                "contentName": {"S": name},
-                "Biography": {"S": biography},
-                "Genres": {"SS": genres},
-                "ImageUrl": {"S": image_url}
+                "artistId": {"S": artist_id},
+                "name": {"S": name},
+                "biography": {"S": biography},
+                "genres": {"SS": genres},
+                "imageUrl": {"S": image_url}
             }
         )
 

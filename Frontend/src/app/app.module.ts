@@ -28,13 +28,19 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { ContentModule } from './content/content.module';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
 import { AdminComponent } from './features/admin/admin.component';
+import { DiscoverPageComponent } from './layout/discover-page/discover-page.component';
+import { SubscriptionManagementComponent } from './layout/subscription-management/subscription-management.component';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import {MatCardModule} from '@angular/material/card'; 
 
 @NgModule({
   declarations: [
     AppComponent,
     NavBarComponent,
     HomeComponent,
-    AdminComponent
+    AdminComponent,
+    DiscoverPageComponent,
+    SubscriptionManagementComponent
   ],
   imports: [
     BrowserModule,
@@ -62,7 +68,12 @@ import { AdminComponent } from './features/admin/admin.component';
     ContentModule,
     MatSnackBarModule,
     MatSelectModule,
-    MatOptionModule
+    MatOptionModule,
+    MatButtonModule,
+    MatIconModule,
+    MatProgressSpinnerModule,
+    MatSnackBarModule,
+    MatCardModule
   ],
   providers: [
     provideAnimationsAsync(),

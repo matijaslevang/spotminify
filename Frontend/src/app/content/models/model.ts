@@ -1,4 +1,5 @@
 export interface Artist {
+    artistId?: any;
     name: string,
     bio: string,
     genres: string[],
@@ -21,4 +22,9 @@ export interface Album {
     imageUrl: string,
     songsUrls: string[],
     rating: number,
+}
+
+export interface Genre {
+  genreId: string;
+  genreName: string;
 }
