@@ -1,85 +1,72 @@
-# # backend/post-content/create_single.py
-import os
-import json
-import uuid
-import datetime
-import boto3
+import os, json, uuid, base64, boto3, datetime
 
+s3  = boto3.client("s3")
 ddb = boto3.client("dynamodb")
-T = os.environ["TABLE"]
 
-def cors_headers():
+# TABLE_NAME = os.environ["TABLE_NAME"]
+# BUCKET     = os.environ["BUCKET_NAME"]
+SINGLES_TABLE = os.environ["SINGLES_TABLE"]
+
+
+def cors():
     return {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
-        "Access-Control-Allow-Methods": "OPTIONS,GET,PUT,POST,DELETE",
+        "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token",
+        "Access-Control-Allow-Methods": "OPTIONS,GET,PUT,POST,DELETE"
     }
 
-def _claims(event):
-    rc = event.get("requestContext", {}) or {}
-    claims = (rc.get("authorizer", {}) or {}).get("claims")
-    if isinstance(claims, dict):
-        return claims
-    jwt = (rc.get("authorizer", {}) or {}).get("jwt", {})
-    claims = jwt.get("claims")
-    return claims if isinstance(claims, dict) else {}
+def _head_exists(bucket, key):
+    try:
+        s3.head_object(Bucket=bucket, Key=key)
+        return True
+    except:
+        return False
 
 def handler(event, _):
     try:
-        # Admin guard
-        role = _claims(event).get("custom:role", "")
-        if role != "Admin":
-            return {"statusCode": 403, "headers": cors_headers(),
-                    "body": json.dumps({"error": "User does not have permission"})}
+        claims = (event.get("requestContext", {}) or {}).get("authorizer", {}).get("claims", {}) or {}
+        if claims.get("custom:role") != "Admin":
+            return {"statusCode":403,"headers":cors(),"body":json.dumps({"error":"forbidden"})}
 
-        b = json.loads(event.get("body") or "{}")
+        data = json.loads(event.get("body") or "{}")
+
+        title     = (data.get("title") or data.get("ContentName") or "").strip()
+        artistIds = data.get("artistIds") or data.get("Artists") or []
+        genres    = data.get("genres")    or data.get("Genres")  or []
+        audioKey  = data.get("audioKey")
+        imageKey  = data.get("imageKey")
+        albumId   = data.get("albumId")
+        trackNo   = data.get("trackNo")
+        explicit  = bool(data.get("explicit", False))
+
+        if not title:    return {"statusCode":400,"headers":cors(),"body":json.dumps({"error":"title required"})}
+        if not audioKey: return {"statusCode":400,"headers":cors(),"body":json.dumps({"error":"audioKey required"})}
+
+        # Validacija da objekat postoji (opciono: izvuci ContentLength/ContentType)
+        audio_bucket, audio_key = audioKey.split("/", 1) if audioKey.startswith("s3://") else (os.environ["AUDIO_BUCKET"], audioKey)
+        if not _head_exists(audio_bucket, audio_key):
+            return {"statusCode":400,"headers":cors(),"body":json.dumps({"error":"audio object missing in S3"})}
+
         now = datetime.datetime.utcnow().isoformat()
-        cid = str(uuid.uuid4())
-
-        title    = b.get("ContentName", "")
-        artists  = b.get("SongArtists", []) or []
-        genres   = b.get("SongGenres", []) or []
-        # S3 reference polja se po potrebi vrate kad uključiš upload
-        # song_ref = b.get("SongRef", "") or ""
-        # song_img = b.get("SongImage", "") or ""
-        album_id = b.get("albumId", "") or ""
+        singleId = f"sin-{uuid.uuid4()}"
 
         item = {
-            "contentType": {"S": "SINGLE"},
-            "contentName": {"S": title},
-            "contentId":   {"S": cid},
-            # "SongRef":     {"S": song_ref},
-            # "SongImage":   {"S": song_img},
-            "SongArtists": {"SS": artists} if artists else {"SS": []},
-            "SongGenres":  {"SS": genres}  if genres  else {"SS": []},
-            "SongRating":  {"N": "0"},
-            "albumId":     {"S": album_id},
-            "trackNo":     {"N": str(b.get("trackNo", 1))},
-            "explicit":    {"BOOL": bool(b.get("explicit", False))},
-            "createdAt":   {"S": now},
-            "updatedAt":   {"S": now},
+            "singleId":  {"S": singleId},
+            "title":     {"S": title},
+            "artistIds": {"SS": artistIds} if artistIds else {"SS":[]},
+            "genres":    {"SS": genres}    if genres    else {"SS":[]},
+            "audioKey":  {"S": audio_key},
+            "explicit":  {"BOOL": explicit},
+            "createdAt": {"S": now},
         }
+        if imageKey:
+            # opciono HEAD i ovde
+            img_bucket, img_key = imageKey.split("/", 1) if imageKey.startswith("s3://") else (os.environ["IMAGES_BUCKET"], imageKey)
+            item["imageKey"] = {"S": img_key}
+        if albumId: item["albumId"] = {"S": albumId}
+        if trackNo is not None: item["trackNo"] = {"N": str(int(trackNo))}
 
-        ddb.put_item(TableName=T, Item=item)
-
-        if genres:
-            req = {"RequestItems": {T: []}}
-            for g in genres:
-                req["RequestItems"][T].append({
-                    "PutRequest": {"Item": {
-                        "contentType": {"S": f"GENRE#{g}"},
-                        "contentName": {"S": f"CONTENT#{cid}"},
-                        "linkType":    {"S": "BY_GENRE"},
-                        "targetType":  {"S": "SINGLE"},
-                        "targetName":  {"S": title},
-                        "createdAt":   {"S": now},
-                    }}
-                })
-            ddb.batch_write_item(**req)
-
-        return {"statusCode": 201, "headers": cors_headers(),
-                "body": json.dumps({"contentId": cid})}
-
+        ddb.put_item(TableName=SINGLES_TABLE, Item=item)
+        return {"statusCode":201,"headers":cors(),"body":json.dumps({"singleId": singleId})}
     except Exception as e:
-        return {"statusCode": 500, "headers": cors_headers(),
-                "body": json.dumps({"error": str(e)})}
+        return {"statusCode":500,"headers":cors(),"body":json.dumps({"error":str(e)})}
