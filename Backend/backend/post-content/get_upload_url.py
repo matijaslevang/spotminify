@@ -1,6 +1,8 @@
 import os, json, uuid, boto3
+from botocore.config import Config
 
-s3 = boto3.client("s3")
+s3 = boto3.client("s3", region_name="eu-central-1", 
+    config=Config(signature_version='s3v4'))
 AUDIO_BUCKET  = os.environ["AUDIO_BUCKET"]
 IMAGES_BUCKET = os.environ["IMAGES_BUCKET"]
 

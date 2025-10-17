@@ -3,8 +3,6 @@ import os, json, uuid, base64, boto3, datetime
 s3  = boto3.client("s3")
 ddb = boto3.client("dynamodb")
 
-# BUCKET = os.environ["BUCKET_NAME"]
-# TABLE  = os.environ["TABLE_NAME"]
 ALBUMS_TABLE  = os.environ["ALBUMS_TABLE"]
 SINGLES_TABLE = os.environ["SINGLES_TABLE"]
 AUDIO_BUCKET  = os.environ["AUDIO_BUCKET"]

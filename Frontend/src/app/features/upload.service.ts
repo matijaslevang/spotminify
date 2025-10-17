@@ -47,13 +47,13 @@ export class UploadService {
     );
   }
 
-  async putToS3(url: string, file: File): Promise<Response> {
-    return fetch(url, {
-      method: 'PUT',
-      body: file,
-      headers: { 'Content-Type': file.type }
-    });
-  }
+  async putToS3(url: string, file: File, contentType: string): Promise<Response> {
+  return fetch(url, {
+    method: 'PUT',
+    body: file,
+    headers: { 'Content-Type': contentType }
+  });
+}
 
 createSingle(payload: any): Observable<any> {
 console.log('createSingle payload:', payload); 

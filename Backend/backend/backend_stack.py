@@ -106,12 +106,16 @@ class BackendStack(Stack):
         table_albums = dynamodb.Table(
             self, "Albums",
             partition_key=dynamodb.Attribute(name="albumId", type=dynamodb.AttributeType.STRING),
+            #partition_key=dynamodb.Attribute(name="artistId", type=dynamodb.AttributeType.STRING),
+            #sort_key=dynamodb.Attribute(name="albumId", type=dynamodb.AttributeType.STRING),
             removal_policy=RemovalPolicy.DESTROY
         )
         
         table_singles = dynamodb.Table(
             self, "Singles",
             partition_key=dynamodb.Attribute(name="singleId", type=dynamodb.AttributeType.STRING),
+            #partition_key=dynamodb.Attribute(name="artistId", type=dynamodb.AttributeType.STRING),
+            #sort_key=dynamodb.Attribute(name="singleId", type=dynamodb.AttributeType.STRING),
             removal_policy=RemovalPolicy.DESTROY
         )
         
@@ -320,7 +324,20 @@ class BackendStack(Stack):
             bucket_name=f"audio-files-{self.account}-{self.region}",
             removal_policy=RemovalPolicy.DESTROY,
             auto_delete_objects=True,
-            block_public_access=s3.BlockPublicAccess.BLOCK_ALL
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            cors=[
+        s3.CorsRule(
+            allowed_methods=[
+                s3.HttpMethods.PUT,
+                s3.HttpMethods.POST,
+                s3.HttpMethods.GET,
+                s3.HttpMethods.HEAD,
+            ],
+            allowed_origins=["http://localhost:4200"],
+            allowed_headers=["*"],
+            exposed_headers=["ETag"]
+        )
+    ]
         )
         
         images_bucket = s3.Bucket(
@@ -328,27 +345,33 @@ class BackendStack(Stack):
             bucket_name=f"song-images-{self.account}-{self.region}",
             removal_policy=RemovalPolicy.DESTROY,
             auto_delete_objects=True,
-            block_public_access=s3.BlockPublicAccess.BLOCK_ALL
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            cors=[
+                s3.CorsRule(
+                    allowed_methods=[s3.HttpMethods.PUT],
+                    allowed_origins=["http://localhost:4200"],
+                    allowed_headers=["*"],
+                )
+    ]
         )
         
-        audio_bucket.add_cors_rule(
-            allowed_methods=[s3.HttpMethods.PUT, s3.HttpMethods.GET, s3.HttpMethods.HEAD],
-            allowed_origins=["http://localhost:4200"],   # or "*" for quick dev
-            allowed_headers=["*"],
-            exposed_headers=["ETag"],
-            max_age=3000,
-        )
-        images_bucket.add_cors_rule(
-            allowed_methods=[s3.HttpMethods.PUT, s3.HttpMethods.GET, s3.HttpMethods.HEAD],
-            allowed_origins=["http://localhost:4200"],   # or "*"
-            allowed_headers=["*"],
-            exposed_headers=["ETag"],
-            max_age=3000,
-        )
+        # audio_bucket.add_cors_rule(
+        #     allowed_methods=[s3.HttpMethods.PUT, s3.HttpMethods.GET, s3.HttpMethods.HEAD],
+        #     allowed_origins=["http://localhost:4200"],   # or "*" for quick dev
+        #     allowed_headers=["*"],
+        #     expose_headers=["ETag"],
+        #     max_age=3000,
+        # )
+        # images_bucket.add_cors_rule(
+        #     allowed_methods=[s3.HttpMethods.PUT, s3.HttpMethods.GET, s3.HttpMethods.HEAD],
+        #     allowed_origins=["http://localhost:4200"],   # or "*"
+        #     allowed_headers=["*"],
+        #     expose_headers=["ETag"],
+        #     max_age=3000,
+        # )
         # NEW create_album_lambda
         create_album_lambda = _lambda.Function(
             self, "CreateAlbumLambda",
-            function_name="CreateAlbumLambda",
             runtime=_lambda.Runtime.PYTHON_3_9,
             handler="create_album.handler",
             code=_lambda.Code.from_asset("backend/post-content"),
@@ -634,3 +657,31 @@ class BackendStack(Stack):
             authorization_type=apigw.AuthorizationType.COGNITO,
             authorizer=authorizer
         )
+
+
+        # test_s3_write_lambda = _lambda.Function(
+        #     self, "TestS3WriteLambda",
+        #     runtime=_lambda.Runtime.PYTHON_3_9,
+        #     handler="test_s3_write.handler",
+        #     code=_lambda.Code.from_asset("backend/post-content"), # Novi folder
+        #     environment={
+        #         "AUDIO_BUCKET": audio_bucket.bucket_name
+        #     }
+        # )
+        # audio_bucket.grant_put(test_s3_write_lambda)
+
+        # test_s3_resource = api.root.add_resource(
+        #     "test-s3-write",
+        #     default_cors_preflight_options=apigw.CorsOptions(
+        #         allow_origins=apigw.Cors.ALL_ORIGINS,
+        #         allow_methods=["POST", "OPTIONS"],
+        #         allow_headers=["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key"]
+        #     )
+        # )
+
+        # test_s3_resource.add_method(
+        #     "POST",
+        #     apigw.LambdaIntegration(test_s3_write_lambda),
+        #     authorization_type=apigw.AuthorizationType.COGNITO,
+        #     authorizer=authorizer
+        # )

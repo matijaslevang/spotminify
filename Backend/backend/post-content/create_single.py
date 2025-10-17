@@ -3,10 +3,7 @@ import os, json, uuid, base64, boto3, datetime
 s3  = boto3.client("s3")
 ddb = boto3.client("dynamodb")
 
-# TABLE_NAME = os.environ["TABLE_NAME"]
-# BUCKET     = os.environ["BUCKET_NAME"]
 SINGLES_TABLE = os.environ["SINGLES_TABLE"]
-
 
 def cors():
     return {

@@ -156,16 +156,16 @@ export class AdminComponent implements OnInit {
   this.isSubmittingSingle = true;
   try {
     const audioFile = this.files[0];
-
+    const audioContentType = audioFile.type || 'audio/mpeg';
     // 1) presign audio
     const presA = await this.api.getPresignedUrl({
       bucketType: 'audio',
       fileName: audioFile.name,
-      contentType: audioFile.type || 'audio/mpeg'
+      contentType: audioContentType
     }).toPromise();
 
     // 2) PUT na S3
-    await this.api.putToS3(presA!.url, audioFile);
+    await this.api.putToS3(presA!.url, audioFile, audioContentType);
 
     // 3) presign cover (opciono)
     let imageKey: string | undefined;
@@ -175,7 +175,7 @@ export class AdminComponent implements OnInit {
         fileName: this.cover.name,
         contentType: this.cover.type || 'image/jpeg'
       }).toPromise();
-      await this.api.putToS3(presI!.url, this.cover);
+      await this.api.putToS3(presI!.url, this.cover, this.cover.type);
       imageKey = presI!.key;
     }
 
@@ -278,7 +278,7 @@ export class AdminComponent implements OnInit {
       fileName: this.cover.name,
       contentType: this.cover.type || 'image/jpeg'
     }).toPromise();
-    await this.api.putToS3(presCover!.url, this.cover);
+    await this.api.putToS3(presCover!.url, this.cover, this.cover.type);
     const coverKey = presCover!.key;
 
     // 2) svaka traka presign+PUT
@@ -292,7 +292,7 @@ export class AdminComponent implements OnInit {
         fileName: f.name,
         contentType: f.type || 'audio/mpeg'
       }).toPromise();
-      await this.api.putToS3(presA!.url, f);
+      await this.api.putToS3(presA!.url, f, f.type);
 
       tracks.push({
         title: s.title,
@@ -399,6 +399,59 @@ export class AdminComponent implements OnInit {
     this.albumSingles = [];
     this.albumStep = 0;
   }
+
+  // U AdminComponent.ts
+
+// async runS3Test() {
+//   if (this.singleForm.invalid || !this.files.length) {
+//     this.snack.open('Choose an audio file', 'Close', { panelClass: 'snack-error' });
+//     return;
+//   }
+//   this.isSubmittingSingle = true;
+//   try {
+//     const audioFile = this.files[0];
+    
+//     // 1. Učitaj audio fajl kao Base64 string
+//     const audioB64 = await this.readAsB64(audioFile);
+
+//     // 2. Pošalji Base64 podatke na novu Lambda funkciju
+//     const uploadResult = await this.api.uploadAudioDirect({
+//       audioData: audioB64,
+//       fileName: audioFile.name,
+//       contentType: audioFile.type || 'audio/mpeg'
+//     }).toPromise();
+    
+//     // Opciono: Uploaduj cover sliku (može ostati pre-signed URL jer radi)
+//     let imageKey: string | undefined;
+//     if (this.cover) {
+//       // (Ovaj kod ostaje isti kao pre)
+//     }
+
+//     // 3. Kreiraj singl u bazi sa ključem koji je vratila Lambda
+//     const payload = {
+//       title: this.singleForm.value.title,
+//       artistIds: this.singleForm.value.artistIds,
+//       genres: this.singleForm.value.genres,
+//       explicit: !!this.singleForm.value.explicit,
+//       audioKey: uploadResult.key, // <-- Koristimo ključ iz odgovora nove Lambde
+//       ...(imageKey ? { imageKey } : {})
+//     };
+
+//     this.api.createSingle(payload).subscribe({
+//       next: () => {
+//         this.snack.open('Single created successfully!', 'OK', { duration: 3000 });
+//         this.resetSingle();
+//       },
+//       error: (e) => this.snack.open(e?.error?.error || 'Failed to create single entry', 'Close', { panelClass: 'snack-error' })
+//     });
+    
+//   } catch (e) {
+//     console.error("Upload process failed:", e);
+//     this.snack.open('Upload failed. Check the console.', 'Close', { panelClass: 'snack-error' });
+//   } finally {
+//     this.isSubmittingSingle = false;
+//   }
+// }
 }
 // implements OnInit {
 //   // state
