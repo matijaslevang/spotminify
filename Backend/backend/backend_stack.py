@@ -335,14 +335,14 @@ class BackendStack(Stack):
             allowed_methods=[s3.HttpMethods.PUT, s3.HttpMethods.GET, s3.HttpMethods.HEAD],
             allowed_origins=["http://localhost:4200"],   # or "*" for quick dev
             allowed_headers=["*"],
-            expose_headers=["ETag"],
+            exposed_headers=["ETag"],
             max_age=3000,
         )
         images_bucket.add_cors_rule(
             allowed_methods=[s3.HttpMethods.PUT, s3.HttpMethods.GET, s3.HttpMethods.HEAD],
             allowed_origins=["http://localhost:4200"],   # or "*"
             allowed_headers=["*"],
-            expose_headers=["ETag"],
+            exposed_headers=["ETag"],
             max_age=3000,
         )
         # NEW create_album_lambda

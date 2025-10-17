@@ -31,7 +31,7 @@ import { AdminComponent } from './features/admin/admin.component';
 import { DiscoverPageComponent } from './layout/discover-page/discover-page.component';
 import { SubscriptionManagementComponent } from './layout/subscription-management/subscription-management.component';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import {MatCardModule} from '@angular/material/card'; 
+import {MatCardModule} from '@angular/material/card';
 
 @NgModule({
   declarations: [

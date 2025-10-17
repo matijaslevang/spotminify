@@ -16,6 +16,10 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
+import { RateContentComponent } from './rate-content/rate-content.component';
+import { UpdateAlbumComponent } from './album/update-album/update-album.component';
+import { UpdateArtistComponent } from './artist/update-artist/update-artist.component';
+import { UpdateSongComponent } from './song/update-song/update-song.component';
 
 @NgModule({
   declarations: [
@@ -25,7 +29,11 @@ import { ReactiveFormsModule, FormsModule } from '@angular/forms';
     SongCardComponent,
     AlbumCardComponent,
     ArtistCardComponent,
-    CreateArtistComponent
+    CreateArtistComponent,
+    RateContentComponent,
+    UpdateAlbumComponent,
+    UpdateArtistComponent,
+    UpdateSongComponent
   ],
   exports: [
     SongCardComponent,

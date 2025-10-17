@@ -1,42 +1,47 @@
-.card-container {
-  position: relative;
-  width: auto;
-  border-radius: 10px;
-  margin: 10px;
-  padding: 10px;
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  overflow: hidden;
-  color: white;
+.cards-scroller{ max-height:420px; overflow-y:auto; padding-right:6px; } 
+
+.card-container{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:10px 12px; margin:8px 10px; border-radius:12px;
+  background:linear-gradient(180deg, rgba(255,255,255,.9), rgba(250,250,252,.86));
+  border:1px solid rgba(20,20,20,.06);
+  box-shadow:0 4px 12px rgba(0,0,0,.08); color:#1e1e1e;
+  min-height:72px; max-height:92px;
+}
+.card-container::before{ content:none; }
+
+.meta{ display:flex; align-items:center; gap:10px; min-width:0; }
+.song-card-image{
+  width:60px; height:60px; object-fit:cover; border-radius:8px;
+  box-shadow:0 3px 10px rgba(0,0,0,.12); flex:0 0 auto;
+}
+.info{ min-width:0; }
+.song-name{
+  margin:0; font-size:1rem; font-weight:700; color:#222;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:32vw;
+}
+.song-sub{
+  margin:2px 0 0; font-size:.85rem; color:#555;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:32vw;
 }
 
-.card-container::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-color: var(--dominant-color, #000000cc);
-  filter: blur(10px);
-  z-index: 0;
-  transition: background-color 0.3s ease;
+.actions{ display:flex; align-items:center; gap:8px; flex:0 0 auto; }
+.btn-listen,.btn-del{
+  display:inline-flex; align-items:center; gap:6px; border-radius:9px; font-weight:600;
+  padding:6px 10px; line-height:1; font-size:.9rem;
 }
-
-.card-container > * {
-  position: relative;
-  z-index: 1;
+.btn-listen{
+  background:#fff; color:#222; border:1px solid #e6e6ea;
+  box-shadow:0 2px 6px rgba(0,0,0,.10);
 }
-
-.song-card-image {
-  width: 75px;
-  height: 75px;
-  object-fit: cover;
-  border-radius: 50%;
+.btn-listen:hover{ filter:brightness(.97); }
+.btn-del{
+  border:1px solid var(--color-cyclamen,#e94b8a); color:var(--color-cyclamen,#e94b8a);
+  background:transparent;
 }
+.btn-del:hover{ background:rgba(233,75,138,.12); }
 
-.song-card-button {
-  background-color: white !important;
-  border: 2px solid black;
-  font-family: "Fira Sans Condensed", sans-serif !important;
-  font-weight: bold;
+@media (max-width:640px){
+  .card-container{ gap:10px; }
+  .song-name,.song-sub{ max-width:56vw; }
 }

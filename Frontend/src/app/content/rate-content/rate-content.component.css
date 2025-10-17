@@ -1,0 +1,139 @@
+.btn-rate {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: var(--color-cyclamen, #e94b8a);
+  color: #fff;
+  border: 0;
+  cursor: pointer;
+  font-family: "Fira Sans Condensed", sans-serif;
+  font-size: 1rem;
+  letter-spacing: 0.3px;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.btn-rate:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
+}
+
+/* Dijalog */
+.mini-rate-dialog .mdc-dialog__surface {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.25);
+}
+
+.dlg {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e4e4e8;
+  padding: 24px 28px;
+  margin: 10px;
+  min-width: 340px;
+  max-width: 92vw;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  text-align: center;
+}
+
+/* Header */
+.dlg-head {
+  display: flex;
+  flex-direction: column;          /* naslov u centru */
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid #e9e9ec;
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+}
+.dlg-head h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #2c2c2c;
+}
+
+.x {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 22px;
+  color: #555;
+  transition: background 0.1s ease;
+}
+.x:hover {
+  background: #f5f5f7;
+}
+
+/* Zvezdice */
+.stars {
+  display: inline-flex;
+  flex-direction: row-reverse;
+  justify-content: center;
+  gap: 8px;
+  align-items: center;
+  margin: 24px auto;               /* centrirano u sredini */
+}
+.stars input { display: none; }
+
+.stars label {
+  font-size: 34px;
+  cursor: pointer;
+  color: #c9c9cf;                /* neaktivna */
+  transition: transform .08s, color .08s;
+}
+
+/* hover highlight */
+.stars label:hover,
+.stars label:hover ~ label {
+  color: var(--color-cyclamen, #e94b8a);
+  transform: scale(1.12);
+}
+
+/* checked: zadrži boju za izabranu i sve "levo" (zbog row-reverse) */
+.stars input:checked ~ label {
+  color: var(--color-cyclamen, #e94b8a);
+}
+
+/* Dugmad */
+.dlg-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+.btn-cancel,
+.btn-submit {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 0;
+  cursor: pointer;
+  font-size: 1rem;
+  font-family: "Fira Sans Condensed", sans-serif;
+}
+.btn-cancel {
+  background: #f5f5f7;
+  color: #333;
+  border: 1px solid #ddd;
+}
+.btn-cancel:hover {
+  background: #ebebef;
+}
+.btn-submit {
+  background: var(--color-cyclamen, #e94b8a);
+  color: #fff;
+  box-shadow: 0 3px 8px rgba(233, 75, 138, 0.3);
+}
+.btn-submit:hover {
+  filter: brightness(0.95);
+  box-shadow: 0 4px 10px rgba(233, 75, 138, 0.4);
+}
+.btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
