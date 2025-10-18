@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { Album, Artist, Genre, Song } from '../../content/models/model';
+import { Album, Artist, FilterDetails, Genre, Song } from '../../content/models/model';
 import { ContentService } from '../../content/content.service';
 import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -10,9 +10,9 @@ import { MatSnackBar } from '@angular/material/snack-bar';
   styleUrl: './discover-page.component.css'
 })
 export class DiscoverPageComponent {
-  resultSongs: Song[] = []
-  resultArtists: Artist[] = []
-  resultAlbums: Album[] = []
+  resultSongs: FilterDetails[] = []
+  resultArtists: FilterDetails[] = []
+  resultAlbums: FilterDetails[] = []
   mySubscribedGenreIds = new Set<string>();
   
   genres: Genre[] = []
