@@ -118,6 +118,61 @@ class BackendStack(Stack):
             #sort_key=dynamodb.Attribute(name="singleId", type=dynamodb.AttributeType.STRING),
             removal_policy=RemovalPolicy.DESTROY
         )
+
+        table_genre_index = dynamodb.Table(
+            self, 'GenreIndex',
+            partition_key=dynamodb.Attribute(name='genreName', type=dynamodb.AttributeType.STRING),
+            sort_key=dynamodb.Attribute(name='contentKey', type=dynamodb.AttributeType.STRING),
+            removal_policy=RemovalPolicy.DESTROY
+        )
+
+        filter_by_genre_lambda = _lambda.Function(
+            self, 'FilterByGenreLambda',
+            function_name="FilterByGenreLambda",
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            handler='filter_by_genre.handler',
+            code=_lambda.Code.from_asset("backend/lambdas/content"),
+            environment={
+                'GENRE_INDEX_TABLE': table_genre_index.table_name
+            }
+        )
+
+        table_genre_index.grant_read_data(filter_by_genre_lambda)
+
+        table_artist_index = dynamodb.Table(
+            self, 'ArtistIndex',
+            partition_key=dynamodb.Attribute(name='artistId', type=dynamodb.AttributeType.STRING),
+            sort_key=dynamodb.Attribute(name='contentKey', type=dynamodb.AttributeType.STRING),
+            removal_policy=RemovalPolicy.DESTROY
+        )
+
+        filter_by_artist_lambda = _lambda.Function(
+            self, 'FilterByArtistLambda',
+            function_name="FilterByArtistLambda",
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            handler='filter_by_artist.handler',
+            code=_lambda.Code.from_asset("backend/lambdas/content"),
+            environment={
+                'ARTIST_INDEX_TABLE': table_artist_index.table_name
+            }
+        )
+
+        table_artist_index.grant_read_data(filter_by_artist_lambda)
+
+        filter_add_lambda = _lambda.Function(
+            self, 'FilterAddLambda',
+            function_name="FilterAddLambda",
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            handler='create_filter.handler',
+            code=_lambda.Code.from_asset("backend/lambdas/content"),
+            environment={
+                'ARTIST_INDEX_TABLE': table_artist_index.table_name,
+                'GENRE_INDEX_TABLE': table_genre_index.table_name
+            }
+        )
+
+        table_artist_index.grant_write_data(filter_add_lambda)
+        table_genre_index.grant_write_data(filter_add_lambda)
         
         initial_genres = [
             'Pop', 'Rock', 'Jazz', 'Hip-Hop', 'Classical', 'Electronic', 'Lo-Fi', 'R&B', 'Metal'
@@ -194,7 +249,8 @@ class BackendStack(Stack):
             code=_lambda.Code.from_asset("backend/lambdas/content"),
             environment={
                 "BUCKET_NAME": artist_bucket.bucket_name,
-                "TABLE_NAME": table_artists.table_name
+                "TABLE_NAME": table_artists.table_name,
+                "FILTER_ADD_LAMBDA": filter_add_lambda.function_name
             }
         )
 
@@ -276,6 +332,34 @@ class BackendStack(Stack):
             apigw.MockIntegration(),
             authorization_type=apigw.AuthorizationType.COGNITO,
             authorizer=authorizer
+        )
+
+        filter_genre_resource = api.root.add_resource(
+            "filter-genre",
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_origins=apigw.Cors.ALL_ORIGINS,
+                allow_methods=["GET", "OPTIONS"],
+                allow_headers=["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key"]
+            )
+        )
+
+        filter_genre_resource.add_method(
+            "GET",
+            apigw.LambdaIntegration(filter_by_genre_lambda)
+        )
+
+        filter_artist_resource = api.root.add_resource(
+            "filter-artist",
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_origins=apigw.Cors.ALL_ORIGINS,
+                allow_methods=["GET", "OPTIONS"],
+                allow_headers=["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key"]
+            )
+        )
+
+        filter_artist_resource.add_method(
+            "GET",
+            apigw.LambdaIntegration(filter_by_artist_lambda)
         )
 
         genres_resource = api.root.add_resource(
@@ -380,6 +464,8 @@ class BackendStack(Stack):
                 "SINGLES_TABLE": table_singles.table_name,  # umesto singles.table_name
                 "AUDIO_BUCKET":  audio_bucket.bucket_name,
                 "IMAGES_BUCKET": images_bucket.bucket_name,
+                "GENRE_INDEX_TABLE": table_genre_index.table_name,
+                "FILTER_ADD_LAMBDA": filter_add_lambda.function_name
             },
             #log_retention=logs.RetentionDays.ONE_WEEK
         )
@@ -395,6 +481,7 @@ class BackendStack(Stack):
                 "SINGLES_TABLE": table_singles.table_name,
                 "AUDIO_BUCKET":  audio_bucket.bucket_name,
                 "IMAGES_BUCKET": images_bucket.bucket_name,
+                "FILTER_ADD_LAMBDA": filter_add_lambda.function_name
             },
             #log_retention=logs.RetentionDays.ONE_WEEK
         )
