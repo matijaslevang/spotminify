@@ -2,11 +2,13 @@ import os, json, uuid, base64, boto3, datetime
 
 s3  = boto3.client("s3")
 ddb = boto3.client("dynamodb")
+lambda_client = boto3.client("lambda")
 
 ALBUMS_TABLE  = os.environ["ALBUMS_TABLE"]
 SINGLES_TABLE = os.environ["SINGLES_TABLE"]
 AUDIO_BUCKET  = os.environ["AUDIO_BUCKET"]
 IMAGES_BUCKET = os.environ["IMAGES_BUCKET"]
+FILTER_ADD_LAMBDA = os.environ["FILTER_ADD_LAMBDA"]
 
 def cors():
     return {
@@ -54,6 +56,19 @@ def handler(event, _):
      
         ddb.put_item(TableName=ALBUMS_TABLE, Item=album)
 
+        payload = {
+            "contentId": album,
+            "contentType": "album",
+            "contentName": title,
+            "imageUrl": coverKey,
+            "contentGenres": genres,
+            "contentArtists": artistIds # TODO check this stuff out
+        }
+        lambda_client.invoke(
+            FunctionName=FILTER_ADD_LAMBDA,
+            InvocationType="Event",
+            Payload=json.dumps(payload)
+        )
         # kreiraj single stavke
         created = []
         for t in tracks:
@@ -84,6 +99,19 @@ def handler(event, _):
 
             ddb.put_item(TableName=SINGLES_TABLE, Item=item)
             created.append({"singleId": singleId, "trackNo": trno})
+            payload = {
+                "contentId": singleId,
+                "contentType": "single",
+                "contentName": stitle,
+                "imageUrl": ikey,
+                "contentGenres": sgenres,
+                "contentArtists": sarts # TODO check this stuff out
+            }
+            lambda_client.invoke(
+                FunctionName=FILTER_ADD_LAMBDA,
+                InvocationType="Event",
+                Payload=json.dumps(payload)
+            )
 
         return {"statusCode":201,"headers":cors(),"body":json.dumps({"albumId": albumId, "tracks": created})}
     except Exception as e:
