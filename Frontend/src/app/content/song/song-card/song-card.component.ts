@@ -1,5 +1,5 @@
 import { AfterViewInit, Component, ElementRef, Input, ViewChild } from '@angular/core';
-import { Song } from '../../models/model';
+import { FilterDetails, Song } from '../../models/model';
 import { FastAverageColor } from 'fast-average-color';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../auth/auth.service';
@@ -10,7 +10,15 @@ import { AuthService } from '../../../auth/auth.service';
 })
 export class SongCardComponent implements AfterViewInit {
   @ViewChild('songCardImage') songImageRef!: ElementRef<HTMLImageElement>;
-  @Input() song: Song;
+  @Input() song: Song = {
+    name: '',
+    artists: [],
+    genres: [],
+    imageUrl: '',
+    songUrl: '',
+    rating: 0
+  };
+  @Input() filterDetails: FilterDetails
 
   dominantColor: string = "#ffffff";
   isAdmin = false;
@@ -22,6 +30,13 @@ export class SongCardComponent implements AfterViewInit {
       next: role => this.isAdmin = role === 'Admin', 
       error: () => this.isAdmin = false
     });
+    if (this.filterDetails) {
+      this.song.name = this.filterDetails.contentName
+      this.song.songId = this.filterDetails.contentId
+      this.song.imageUrl = this.filterDetails.imageUrl
+      this.song.artists = this.filterDetails.contentArtists
+      this.song.genres = this.filterDetails.contentGenres
+    }
   }
 
   ngAfterViewInit(): void {
