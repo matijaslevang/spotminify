@@ -7,6 +7,7 @@ export interface Artist {
 }
 
 export interface Song {
+    songId?: any;
     name: string,
     artists: string[],
     genres: string[],
@@ -16,6 +17,7 @@ export interface Song {
 }
 
 export interface Album {
+    albumId?: any;
     name: string,
     artists: string[],
     genres: string[],

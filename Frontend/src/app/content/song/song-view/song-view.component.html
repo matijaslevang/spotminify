@@ -4,4 +4,20 @@
     <audio class="song-player" controls (play)="onPlay()" (pause)="onPause()" [src]="song.songUrl">
         Your browser does not support the audio element.
     </audio>
+    <br>
+    <a (click)="onDownload()">Download for offline</a>
+        <a *ngIf="audioSrc !== song.songUrl" (click)="onRemove()">Remove download</a>
+        <audio [src]="audioSrc" controls></audio>
+    <br>
+    <app-rate-content
+        [contentType]="'SONG'"
+        [contentId]="song.songId"
+        buttonLabel="Rate song"
+        (rated)="onSongRated($event)">
+    </app-rate-content>
+    <br>
+    <!-- postojeći sadržaj ... -->
+    <div class="actions-admin" *ngIf="isAdmin">
+        <button mat-raised-button color="primary" (click)="openEditSingle()">Edit Single</button>
+    </div>
 </div>

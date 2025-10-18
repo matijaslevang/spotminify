@@ -17,23 +17,28 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
-import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { HomeComponent } from './layout/home/home.component';
 import { CommonModule } from '@angular/common';
-import { ContentModule } from './content/content.module';
+import { ReactiveFormsModule, FormsModule } from '@angular/forms';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { MatSelectModule } from '@angular/material/select';
 import { MatOptionModule } from '@angular/material/core';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatTabsModule } from '@angular/material/tabs';
+import { ContentModule } from './content/content.module';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { AdminComponent } from './features/admin/admin.component';
 import { DiscoverPageComponent } from './layout/discover-page/discover-page.component';
 import { SubscriptionManagementComponent } from './layout/subscription-management/subscription-management.component';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSnackBarModule } from '@angular/material/snack-bar';
-import {MatCardModule} from '@angular/material/card'; 
+import {MatCardModule} from '@angular/material/card';
 
 @NgModule({
   declarations: [
     AppComponent,
     NavBarComponent,
     HomeComponent,
+    AdminComponent,
     DiscoverPageComponent,
     SubscriptionManagementComponent
   ],
@@ -51,10 +56,17 @@ import {MatCardModule} from '@angular/material/card';
     MatNativeDateModule,
     MatFormFieldModule,
     MatDatepickerModule,
+    ReactiveFormsModule, 
     FormsModule,
-    ReactiveFormsModule,
+    CommonModule,
+    MatSelectModule,
+    MatOptionModule,
+    MatTabsModule,
+    BrowserAnimationsModule,
+    MatSlideToggleModule,
     CommonModule,
     ContentModule,
+    MatSnackBarModule,
     MatSelectModule,
     MatOptionModule,
     MatButtonModule,

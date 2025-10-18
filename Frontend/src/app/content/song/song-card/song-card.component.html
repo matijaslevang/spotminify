@@ -1,5 +1,18 @@
-<div class="card-container" [style.--dominant-color]="dominantColor + 'cc'">
-    <img #songCardImage class="song-card-image" src={{song.imageUrl}} alt="image.png">
-    <span>{{song.name}}</span>
-    <button mat-button class="song-card-button" (click)="viewSong()">Listen</button>
+<div class="card-container">
+  <div class="meta">
+    <img #songCardImage class="song-card-image" [src]="song.imageUrl" [alt]="song.name">
+    <div class="info">
+      <h3 class="song-name">{{ song.name }}</h3>
+      <p class="song-sub">{{ song.artists?.join(', ') }} · {{ song.genres?.join(', ') }}</p>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button mat-flat-button class="btn-listen" (click)="viewSong()">
+      <mat-icon>play_arrow</mat-icon><span>Listen</span>
+    </button>
+    <button mat-stroked-button class="btn-del" *ngIf="isAdmin" (click)="confirmDelete()">
+      <mat-icon>delete</mat-icon><span>Delete</span>
+    </button>
+  </div>
 </div>

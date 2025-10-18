@@ -3,6 +3,9 @@ import { Artist, Song, Album } from '../../models/model';
 import { ContentService } from '../../content.service';
 import { Router } from '@angular/router';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { AuthService } from '../../../auth/auth.service';
+import { UpdateArtistComponent } from '../update-artist/update-artist.component';
+import { MatDialog } from '@angular/material/dialog';
 
 @Component({
   selector: 'app-artist-view',
@@ -17,11 +20,13 @@ export class ArtistViewComponent implements OnInit {
   
   isLoading = true;
   mySubscribedArtistIds = new Set<string>();
-
+  isAdmin = false;
   constructor(
     private contentService: ContentService, 
     private router: Router,
-    private snackBar: MatSnackBar
+    private snackBar: MatSnackBar,
+    private auth: AuthService,
+    private dialog: MatDialog,
   ) {
     this.artistName = history.state.artistName;
     console.log("Artist name from history.state:", this.artistName);
@@ -31,12 +36,19 @@ export class ArtistViewComponent implements OnInit {
     if (this.artistName) {
       this.loadArtistData(this.artistName);
       this.loadMySubscriptions();
+      this.auth.getUserRole().subscribe(r => this.isAdmin = (r === 'Admin' || r === 'ADMIN'));
     } else {
       console.error("Artist name not found in state, redirecting.");
       this.router.navigate(['/discover']);
     }
   }
-
+  openEditArtist(){
+    const ref = this.dialog.open(UpdateArtistComponent, {
+      width: '720px',
+      data: { artist: this.artist, availableGenres: this.artistSongs } // prosledi šta već imaš
+    });
+    ref.afterClosed().subscribe(saved => { if (saved) this.loadArtistData(this.artist.name); });
+  }
   loadArtistData(artistName: string): void {
     this.isLoading = true;
     this.contentService.getArtist(artistName).subscribe({
@@ -101,4 +113,8 @@ export class ArtistViewComponent implements OnInit {
       error: (err) => this.snackBar.open('Failed to unsubscribe.', 'Close', { duration: 3000 })
     });
   }
+  onArtistRated(value: number) {
+  this.snackBar.open(`Thanks for rating ${this.artist.name}: ${value}/5`, 'Close', { duration: 2500 });
+}
+
 }

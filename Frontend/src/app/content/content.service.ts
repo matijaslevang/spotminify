@@ -156,13 +156,16 @@ export class ContentService {
   }
 
   getRecommendedFeed(): Observable<any> {
-    /*return of({
+    return of({
       recommendedArtists: this.ARTISTS,
       recommendedAlbums: this.ALBUMS,
       recommendedSongs: this.SONGS
-    })*/
-    return this.httpClient.get(`${environment.apiUrl}/feed`)
+    })
+    //return this.httpClient.get(`${environment.apiUrl}/feed`)
   }
+  updateArtist(fd: FormData){ return this.httpClient.put(`${environment.apiUrl}/artists`, fd); } // ili PUT /api/artists/{id}
+  updateSingle(fd: FormData){ return this.httpClient.put('/api/singles', fd); }     // ili PUT /api/singles/{id}
+  updateAlbum(fd: FormData){ return this.httpClient.put('/api/albums', fd); }       // ili PUT /api/albums/{id}
 
   createArtist(payload: any): Observable<any> {
     return this.httpClient.post(`${environment.apiUrl}/artists`, payload, {
