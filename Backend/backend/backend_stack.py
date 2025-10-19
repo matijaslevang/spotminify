@@ -118,6 +118,12 @@ class BackendStack(Stack):
             #sort_key=dynamodb.Attribute(name="singleId", type=dynamodb.AttributeType.STRING),
             removal_policy=RemovalPolicy.DESTROY
         )
+        table_singles.add_global_secondary_index(
+            index_name="by-album-id",
+            partition_key=dynamodb.Attribute(name="albumId", type=dynamodb.AttributeType.STRING),
+            sort_key=dynamodb.Attribute(name="singleId", type=dynamodb.AttributeType.STRING),
+            projection_type=dynamodb.ProjectionType.ALL
+        )
 
         table_genre_index = dynamodb.Table(
             self, 'GenreIndex',
@@ -474,7 +480,58 @@ class BackendStack(Stack):
             authorization_type=apigw.AuthorizationType.COGNITO,
             authorizer=authorizer
         )
+
+        get_album_lambda = _lambda.Function(
+            self, "GetAlbumLambda",
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            handler="get_album.handler",
+            code=_lambda.Code.from_asset("backend/lambdas/content"),
+            environment={
+                "ALBUM_TABLE": table_albums.table_name
+            }
+        )
+        table_albums.grant_read_data(get_album_lambda)
+
+        get_album = api.root.add_resource("get-album",
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_origins=apigw.Cors.ALL_ORIGINS,
+                allow_methods=["GET", "OPTIONS"],
+                allow_headers=["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key"]
+            ))
+
+        get_album.add_method(
+            "GET",
+            apigw.LambdaIntegration(get_album_lambda),
+            authorization_type=apigw.AuthorizationType.COGNITO,
+            authorizer=authorizer
+        )
         
+        get_singles_by_album_lambda = _lambda.Function(
+            self, "GetSinglesByAlbumLambda",
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            handler="get_singles_by_album.handler",
+            code=_lambda.Code.from_asset("backend/lambdas/content"),
+            environment={
+                "SINGLE_TABLE": table_singles.table_name,
+                "SINGLES_GSI": "by-album-id"
+            }
+        )
+        table_singles.grant_read_data(get_singles_by_album_lambda)
+
+        get_album_songs = api.root.add_resource("get-album-songs",
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_origins=apigw.Cors.ALL_ORIGINS,
+                allow_methods=["GET", "OPTIONS"],
+                allow_headers=["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key"]
+            ))
+
+        get_album_songs.add_method(
+            "GET",
+            apigw.LambdaIntegration(get_singles_by_album_lambda),
+            authorization_type=apigw.AuthorizationType.COGNITO,
+            authorizer=authorizer
+        )
+
         audio_bucket = s3.Bucket(
             self, "SongFilesBucket",
             bucket_name=f"audio-files-{self.account}-{self.region}",
