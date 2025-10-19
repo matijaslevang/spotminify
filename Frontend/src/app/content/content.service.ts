@@ -53,35 +53,35 @@ export class ContentService {
 
   SONGS: Song[] = [
     {
-      name: "Summertime Sadness",
-      artists: ["Lana Del Rey"],
+      title: "Summertime Sadness",
+      artistIds: ["Lana Del Rey"],
       genres: ["Indie Pop", "Electropop"],
-      imageUrl: "https://picsum.photos/id/1003/200/200",
-      songUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+      imageKey: "https://picsum.photos/id/1003/200/200",
+      audioKey: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
       rating: 4.8
     },
     {
-      name: "HUMBLE.",
-      artists: ["Kendrick Lamar"],
+      title: "HUMBLE.",
+      artistIds: ["Kendrick Lamar"],
       genres: ["Hip Hop", "Rap"],
-      imageUrl: "https://picsum.photos/id/1021/200/200",
-      songUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+      imageKey: "https://picsum.photos/id/1021/200/200",
+      audioKey: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
       rating: 4.9
     },
     {
-      name: "Rolling in the Deep",
-      artists: ["Adele"],
+      title: "Rolling in the Deep",
+      artistIds: ["Adele"],
       genres: ["Pop", "Soul"],
-      imageUrl: "https://picsum.photos/id/1040/200/200",
-      songUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
+      imageKey: "https://picsum.photos/id/1040/200/200",
+      audioKey: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
       rating: 4.7
     },
     {
-      name: "Do I Wanna Know?",
-      artists: ["Arctic Monkeys"],
+      title: "Do I Wanna Know?",
+      artistIds: ["Arctic Monkeys"],
       genres: ["Indie Rock", "Alternative"],
-      imageUrl: "https://picsum.photos/id/1062/200/200",
-      songUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
+      imageKey: "https://picsum.photos/id/1062/200/200",
+      audioKey: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
       rating: 4.6
     }
   ];
@@ -140,7 +140,7 @@ export class ContentService {
   }
 
   getSongsByArtist(artistName: string): Observable<Song[]> {
-    const songs = this.SONGS.filter(song => song.artists.includes(artistName));
+    const songs = this.SONGS.filter(song => song.artistIds.includes(artistName));
     return of(songs);
   }
 
@@ -149,8 +149,10 @@ export class ContentService {
     return of(albums);
   }
 
-  getSong(name: string): Observable<Song> {
-    return of(this.SONGS.find(v => v.name === name))
+  getSong(singleId: string): Observable<Song> {
+    return this.httpClient.get<Song>(`${environment.apiUrl}/get-single`, {
+      params: { singleId: singleId }
+    })
   }
 
   getAlbum(name: string): Observable<Album> {
