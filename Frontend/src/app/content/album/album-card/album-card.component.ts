@@ -11,11 +11,10 @@ import { AuthService } from '../../../auth/auth.service';
 export class AlbumCardComponent {
   @ViewChild('albumCardImage') albumImageRef!: ElementRef<HTMLImageElement>;
   @Input() album: Album = {
-    name: '',
-    artists: [],
+    title: '',
+    artistIds: [],
     genres: [],
-    imageUrl: '',
-    songsUrls: [],
+    coverKey: '',
     rating: 0
   };
   @Input() filterDetails: FilterDetails
@@ -35,11 +34,11 @@ export class AlbumCardComponent {
       }
     });
     if (this.filterDetails) {
-      this.album.name = this.filterDetails.contentName
+      this.album.title = this.filterDetails.contentName
       this.album.albumId = this.filterDetails.contentId
-      this.album.imageUrl = this.filterDetails.imageUrl
+      this.album.coverKey = this.filterDetails.imageUrl
       this.album.genres = this.filterDetails.contentGenres
-      this.album.artists = this.filterDetails.contentArtists
+      this.album.artistIds = this.filterDetails.contentArtists
     }
   }
 
@@ -55,11 +54,11 @@ export class AlbumCardComponent {
   }
 
   viewAlbum(): void {
-    this.router.navigate(["/album"], {state: { albumName: this.album.name }});
+    this.router.navigate(["/album"], {state: { albumId: this.album.albumId }});
   }
   
   confirmDelete(){ 
-    if(confirm(`Delete ${this.album.name}?`)) //this.deleteAlbum();
+    if(confirm(`Delete ${this.album.title}?`)) //this.deleteAlbum();
       console.log('delete')   
     }
 

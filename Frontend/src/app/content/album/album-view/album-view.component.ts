@@ -1,5 +1,5 @@
 import { Component, ElementRef, QueryList, ViewChildren } from '@angular/core';
-import { Album } from '../../models/model';
+import { Album, Song } from '../../models/model';
 import { ContentService } from '../../content.service';
 import { Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
@@ -12,14 +12,14 @@ import { UpdateAlbumComponent } from '../update-album/update-album.component';
 })
 export class AlbumViewComponent {
   album: Album = {
-    name: "",
-    artists: [],
+    title: "",
+    artistIds: [],
     genres: [],
-    imageUrl: "",
-    songsUrls: [],
+    coverKey: "",
     rating: 4.5,
   }
-  albumName: string;
+  albumId: string;
+  albumSingles: Song[] = []
 
   @ViewChildren('audioPlayer') audioPlayers!: QueryList<ElementRef<HTMLAudioElement>>;
   isPlaying = false;
@@ -27,8 +27,8 @@ export class AlbumViewComponent {
 
   constructor(private contentService: ContentService, private router: Router,private auth: AuthService, private dialog: MatDialog) {
     const navigation = this.router.getCurrentNavigation();
-    this.albumName = navigation?.extras?.state?.['albumName'];
-    console.log(this.albumName)
+    this.albumId = navigation?.extras?.state?.['albumId'];
+    console.log(this.albumId)
     this.auth.getUserRole().subscribe(r => this.isAdmin = (r === 'Admin' || r === 'ADMIN'));
 }
 
@@ -45,9 +45,15 @@ export class AlbumViewComponent {
   }
 
   ngOnInit() {
-    this.contentService.getAlbum(this.albumName).subscribe({
+    console.log(this.albumId)
+    this.contentService.getAlbum(this.albumId).subscribe({
       next: (album: Album) => {
         this.album = album;
+      }
+    })
+    this.contentService.getSongsByAlbum(this.albumId).subscribe({
+      next: (songs: Song[]) => {
+        this.albumSingles = songs
       }
     })
   }

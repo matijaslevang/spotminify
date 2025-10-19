@@ -12,7 +12,7 @@ export class ArtistCardComponent {
   @ViewChild('artistCardImage') artistImageRef!: ElementRef<HTMLImageElement>;
   @Input() artist: Artist = {
     name: '',
-    bio: '',
+    biography: '',
     genres: [],
     imageUrl: ''
   };
@@ -53,7 +53,7 @@ export class ArtistCardComponent {
   }
 
   viewArtist(): void {
-    this.router.navigate(["/artist"], {state: { artistName: this.artist.name }});
+    this.router.navigate(["/artist"], {state: { artistId: this.artist.artistId }});
   }
   confirmDelete() {
   if (confirm(`Delete ${this.artist.name}?`)) {

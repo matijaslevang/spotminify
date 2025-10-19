@@ -1,28 +1,27 @@
 export interface Artist {
     artistId?: any;
     name: string,
-    bio: string,
+    biography: string,
     genres: string[],
     imageUrl: string
 }
 
 export interface Song {
-    songId?: any;
-    name: string,
-    artists: string[],
+    singleId?: any;
+    title: string,
+    artistIds: string[],
     genres: string[],
-    imageUrl: string,
-    songUrl: string,
+    imageKey: string,
+    audioKey: string,
     rating: number,
 }
 
 export interface Album {
     albumId?: any;
-    name: string,
-    artists: string[],
+    title: string,
+    artistIds: string[],
     genres: string[],
-    imageUrl: string,
-    songsUrls: string[],
+    coverKey: string,
     rating: number,
 }
 

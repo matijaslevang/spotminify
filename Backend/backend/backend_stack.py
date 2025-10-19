@@ -118,6 +118,12 @@ class BackendStack(Stack):
             #sort_key=dynamodb.Attribute(name="singleId", type=dynamodb.AttributeType.STRING),
             removal_policy=RemovalPolicy.DESTROY
         )
+        table_singles.add_global_secondary_index(
+            index_name="by-album-id",
+            partition_key=dynamodb.Attribute(name="albumId", type=dynamodb.AttributeType.STRING),
+            sort_key=dynamodb.Attribute(name="singleId", type=dynamodb.AttributeType.STRING),
+            projection_type=dynamodb.ProjectionType.ALL
+        )
 
         table_genre_index = dynamodb.Table(
             self, 'GenreIndex',
@@ -238,7 +244,28 @@ class BackendStack(Stack):
             bucket_name=f"artist-images-{self.account}-{self.region}",
             removal_policy=RemovalPolicy.DESTROY,
             auto_delete_objects=True,
-            block_public_access=s3.BlockPublicAccess.BLOCK_ALL
+            block_public_access=s3.BlockPublicAccess.BLOCK_ACLS_ONLY,
+            cors=[
+                s3.CorsRule(
+                    allowed_methods=[
+                        s3.HttpMethods.PUT,
+                        s3.HttpMethods.POST,
+                        s3.HttpMethods.GET,
+                        s3.HttpMethods.HEAD,
+                    ],
+                    allowed_origins=["http://localhost:4200"],
+                    allowed_headers=["*"],
+                    exposed_headers=["ETag"]
+            )]
+        )
+
+        artist_bucket.add_to_resource_policy(
+            iam.PolicyStatement(
+                actions=["s3:GetObject"],
+                resources=[f"arn:aws:s3:::{artist_bucket.bucket_name}/*"],
+                effect=iam.Effect.ALLOW,
+                principals=[iam.ArnPrincipal("*")]
+            )
         )
 
         create_artist_lambda = _lambda.Function(
@@ -253,6 +280,7 @@ class BackendStack(Stack):
                 "FILTER_ADD_LAMBDA": filter_add_lambda.function_name
             }
         )
+        filter_add_lambda.grant_invoke(create_artist_lambda)
 
         get_genres_lambda = _lambda.Function(
             self, "GetGenresLambda",
@@ -388,6 +416,31 @@ class BackendStack(Stack):
             authorization_type=apigw.AuthorizationType.COGNITO,
             authorizer=authorizer
         )
+
+        get_artist_lambda = _lambda.Function(
+            self, "GetArtistLambda",
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            handler="get_artist.handler",
+            code=_lambda.Code.from_asset("backend/lambdas/content"),
+            environment={
+                "ARTIST_TABLE": table_artists.table_name
+            }
+        )
+        table_artists.grant_read_data(get_artist_lambda)
+
+        get_artist = api.root.add_resource("get-artist",
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_origins=apigw.Cors.ALL_ORIGINS,
+                allow_methods=["GET", "OPTIONS"],
+                allow_headers=["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key"]
+            ))
+
+        get_artist.add_method(
+            "GET",
+            apigw.LambdaIntegration(get_artist_lambda),
+            authorization_type=apigw.AuthorizationType.COGNITO,
+            authorizer=authorizer
+        )
         
         albums = api.root.add_resource("albums",
             default_cors_preflight_options=apigw.CorsOptions(
@@ -403,25 +456,110 @@ class BackendStack(Stack):
                 allow_headers=["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key"]
             ))
         
+        get_single_lambda = _lambda.Function(
+            self, "GetSingleLambda",
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            handler="get_single.handler",
+            code=_lambda.Code.from_asset("backend/lambdas/content"),
+            environment={
+                "SINGLE_TABLE": table_singles.table_name
+            }
+        )
+        table_singles.grant_read_data(get_single_lambda)
+
+        get_single = api.root.add_resource("get-single",
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_origins=apigw.Cors.ALL_ORIGINS,
+                allow_methods=["GET", "OPTIONS"],
+                allow_headers=["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key"]
+            ))
+
+        get_single.add_method(
+            "GET",
+            apigw.LambdaIntegration(get_single_lambda),
+            authorization_type=apigw.AuthorizationType.COGNITO,
+            authorizer=authorizer
+        )
+
+        get_album_lambda = _lambda.Function(
+            self, "GetAlbumLambda",
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            handler="get_album.handler",
+            code=_lambda.Code.from_asset("backend/lambdas/content"),
+            environment={
+                "ALBUM_TABLE": table_albums.table_name
+            }
+        )
+        table_albums.grant_read_data(get_album_lambda)
+
+        get_album = api.root.add_resource("get-album",
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_origins=apigw.Cors.ALL_ORIGINS,
+                allow_methods=["GET", "OPTIONS"],
+                allow_headers=["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key"]
+            ))
+
+        get_album.add_method(
+            "GET",
+            apigw.LambdaIntegration(get_album_lambda),
+            authorization_type=apigw.AuthorizationType.COGNITO,
+            authorizer=authorizer
+        )
+        
+        get_singles_by_album_lambda = _lambda.Function(
+            self, "GetSinglesByAlbumLambda",
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            handler="get_singles_by_album.handler",
+            code=_lambda.Code.from_asset("backend/lambdas/content"),
+            environment={
+                "SINGLE_TABLE": table_singles.table_name,
+                "SINGLES_GSI": "by-album-id"
+            }
+        )
+        table_singles.grant_read_data(get_singles_by_album_lambda)
+
+        get_album_songs = api.root.add_resource("get-album-songs",
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_origins=apigw.Cors.ALL_ORIGINS,
+                allow_methods=["GET", "OPTIONS"],
+                allow_headers=["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key"]
+            ))
+
+        get_album_songs.add_method(
+            "GET",
+            apigw.LambdaIntegration(get_singles_by_album_lambda),
+            authorization_type=apigw.AuthorizationType.COGNITO,
+            authorizer=authorizer
+        )
+
         audio_bucket = s3.Bucket(
             self, "SongFilesBucket",
             bucket_name=f"audio-files-{self.account}-{self.region}",
             removal_policy=RemovalPolicy.DESTROY,
             auto_delete_objects=True,
-            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            block_public_access=s3.BlockPublicAccess.BLOCK_ACLS_ONLY,
             cors=[
-        s3.CorsRule(
-            allowed_methods=[
-                s3.HttpMethods.PUT,
-                s3.HttpMethods.POST,
-                s3.HttpMethods.GET,
-                s3.HttpMethods.HEAD,
-            ],
-            allowed_origins=["http://localhost:4200"],
-            allowed_headers=["*"],
-            exposed_headers=["ETag"]
+                s3.CorsRule(
+                    allowed_methods=[
+                        s3.HttpMethods.PUT,
+                        s3.HttpMethods.POST,
+                        s3.HttpMethods.GET,
+                        s3.HttpMethods.HEAD,
+                    ],
+                    allowed_origins=["http://localhost:4200"],
+                    allowed_headers=["*"],
+                    exposed_headers=["ETag"]
+                )
+            ]
         )
-    ]
+
+        audio_bucket.add_to_resource_policy(
+            iam.PolicyStatement(
+                actions=["s3:GetObject"],
+                resources=[f"arn:aws:s3:::{audio_bucket.bucket_name}/*"],
+                effect=iam.Effect.ALLOW,
+                principals=[iam.ArnPrincipal("*")]
+            )
         )
         
         images_bucket = s3.Bucket(
@@ -429,14 +567,29 @@ class BackendStack(Stack):
             bucket_name=f"song-images-{self.account}-{self.region}",
             removal_policy=RemovalPolicy.DESTROY,
             auto_delete_objects=True,
-            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            block_public_access=s3.BlockPublicAccess.BLOCK_ACLS_ONLY,
             cors=[
                 s3.CorsRule(
-                    allowed_methods=[s3.HttpMethods.PUT],
+                    allowed_methods=[
+                        s3.HttpMethods.PUT,
+                        s3.HttpMethods.POST,
+                        s3.HttpMethods.GET,
+                        s3.HttpMethods.HEAD,
+                    ],
                     allowed_origins=["http://localhost:4200"],
                     allowed_headers=["*"],
+                    exposed_headers=["ETag"]
                 )
-    ]
+            ]
+        )
+
+        images_bucket.add_to_resource_policy(
+            iam.PolicyStatement(
+                actions=["s3:GetObject"],
+                resources=[f"arn:aws:s3:::{images_bucket.bucket_name}/*"],
+                effect=iam.Effect.ALLOW,
+                principals=[iam.ArnPrincipal("*")]
+            )
         )
         
         # audio_bucket.add_cors_rule(
@@ -469,6 +622,7 @@ class BackendStack(Stack):
             },
             #log_retention=logs.RetentionDays.ONE_WEEK
         )
+        filter_add_lambda.grant_invoke(create_album_lambda)
 
         # NEW create_single_lambda
         
@@ -485,6 +639,7 @@ class BackendStack(Stack):
             },
             #log_retention=logs.RetentionDays.ONE_WEEK
         )
+        filter_add_lambda.grant_invoke(create_single_lambda)
 
 
         albums.add_method(
