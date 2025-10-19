@@ -6,9 +6,11 @@ import base64
 
 s3 = boto3.client("s3")
 dynamodb = boto3.client("dynamodb")
+lambda_client = boto3.client("lambda")
 
 BUCKET = os.environ["BUCKET_NAME"]
 TABLE = os.environ["TABLE_NAME"]
+FILTER_ADD_LAMBDA = os.environ["FILTER_ADD_LAMBDA"]
 
 artist_id = str(uuid.uuid4())
 
@@ -57,6 +59,19 @@ def handler(event, context):
                 "genres": {"SS": genres},
                 "imageUrl": {"S": image_url}
             }
+        )
+
+        payload = {
+            "contentId": artist_id,
+            "contentType": "artist",
+            "contentName": name,
+            "imageUrl": image_url,
+            "contentGenres": genres,
+        }
+        lambda_client.invoke(
+            FunctionName=FILTER_ADD_LAMBDA,
+            InvocationType="Event",
+            Payload=json.dumps(payload)
         )
 
         return {

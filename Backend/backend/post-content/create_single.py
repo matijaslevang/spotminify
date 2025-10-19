@@ -2,8 +2,10 @@ import os, json, uuid, base64, boto3, datetime
 
 s3  = boto3.client("s3")
 ddb = boto3.client("dynamodb")
+lambda_client = boto3.client("lambda")
 
 SINGLES_TABLE = os.environ["SINGLES_TABLE"]
+FILTER_ADD_LAMBDA = os.environ["FILTER_ADD_LAMBDA"]
 
 def cors():
     return {
@@ -64,6 +66,20 @@ def handler(event, _):
         if trackNo is not None: item["trackNo"] = {"N": str(int(trackNo))}
 
         ddb.put_item(TableName=SINGLES_TABLE, Item=item)
+
+        payload = {
+            "contentId": singleId,
+            "contentType": "single",
+            "contentName": title,
+            "imageUrl": imageKey,
+            "contentGenres": genres,
+            "contentArtists": artistIds # TODO check this stuff out
+        }
+        lambda_client.invoke(
+            FunctionName=FILTER_ADD_LAMBDA,
+            InvocationType="Event",
+            Payload=json.dumps(payload)
+        )
         return {"statusCode":201,"headers":cors(),"body":json.dumps({"singleId": singleId})}
     except Exception as e:
         return {"statusCode":500,"headers":cors(),"body":json.dumps({"error":str(e)})}

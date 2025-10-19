@@ -30,3 +30,11 @@ export interface Genre {
   genreId: string;
   genreName: string;
 }
+
+export interface FilterDetails {
+    contentName: string,
+    contentId: string,
+    imageUrl: string,
+    contentGenres: string[],
+    contentArtists?: string[]
+}

@@ -172,30 +172,29 @@ export class ContentService {
       headers: { 'Content-Type': 'application/json' }
     });
   }
+
   getGenres(): Observable<Genre[]> {
     return this.httpClient.get<Genre[]>(`${environment.apiUrl}/genres`);
   }
 
   getFilteredContentByGenre(genre: any): Observable<any> {
-    return of({resultAlbums: this.ALBUMS.filter(v => v.genres.includes(genre)), resultArtists: this.ARTISTS.filter(v => v.genres.includes(genre)), resultSongs: this.SONGS.filter(v => v.genres.includes(genre))})
-    //return this.httpClient.get(`${environment.apiUrl}/filter`, genre)
+    return this.httpClient.get(`${environment.apiUrl}/filter-genre`, { params: { genreName: genre } })
   }
 
-  getAllGenres(): Observable<any> {
-    return of(['AAAAAAAA', 'Indie Pop', 'Dream Pop', 'Hip Hop', 'Rap', 'Pop', 'Soul', 'Indie Rock', 'Alternative', 'Electropop'])
-    //return this.httpClient.get(`${environment.apiUrl}/genres`)
+  getFilteredContentByArtist(artistId: any): Observable<any> {
+    return this.httpClient.get(`${environment.apiUrl}/filter-artist`, { params: { genreName: artistId } })
   }
 
   getMySubscriptions(): Observable<any[]> {
-  return this.httpClient.get<any[]>(`${environment.apiUrl}/subscriptions`);
-}
+    return this.httpClient.get<any[]>(`${environment.apiUrl}/subscriptions`);
+  }
 
-subscribe(payload: { targetId: string, subscriptionType: string }): Observable<any> {
-  return this.httpClient.post(`${environment.apiUrl}/subscriptions`, payload);
-}
+  subscribe(payload: { targetId: string, subscriptionType: string }): Observable<any> {
+    return this.httpClient.post(`${environment.apiUrl}/subscriptions`, payload);
+  }
 
-unsubscribe(targetId: string): Observable<any> {
-  return this.httpClient.delete(`${environment.apiUrl}/subscriptions/${targetId}`);
-}
+  unsubscribe(targetId: string): Observable<any> {
+    return this.httpClient.delete(`${environment.apiUrl}/subscriptions/${targetId}`);
+  }
 
 }

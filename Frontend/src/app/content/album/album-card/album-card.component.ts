@@ -1,5 +1,5 @@
 import { Component, ElementRef, Input, ViewChild } from '@angular/core';
-import { Album } from '../../models/model';
+import { Album, FilterDetails } from '../../models/model';
 import { Router } from '@angular/router';
 import { FastAverageColor } from 'fast-average-color';
 import { AuthService } from '../../../auth/auth.service';
@@ -10,7 +10,15 @@ import { AuthService } from '../../../auth/auth.service';
 })
 export class AlbumCardComponent {
   @ViewChild('albumCardImage') albumImageRef!: ElementRef<HTMLImageElement>;
-  @Input() album: Album;
+  @Input() album: Album = {
+    name: '',
+    artists: [],
+    genres: [],
+    imageUrl: '',
+    songsUrls: [],
+    rating: 0
+  };
+  @Input() filterDetails: FilterDetails
   isAdmin: boolean = false;
   dominantColor: string = "#ffffff";
 
@@ -26,6 +34,13 @@ export class AlbumCardComponent {
         this.isAdmin = false;
       }
     });
+    if (this.filterDetails) {
+      this.album.name = this.filterDetails.contentName
+      this.album.albumId = this.filterDetails.contentId
+      this.album.imageUrl = this.filterDetails.imageUrl
+      this.album.genres = this.filterDetails.contentGenres
+      this.album.artists = this.filterDetails.contentArtists
+    }
   }
 
   ngAfterViewInit(): void {
