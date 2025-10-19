@@ -1,7 +1,7 @@
 export interface Artist {
     artistId?: any;
     name: string,
-    bio: string,
+    biography: string,
     genres: string[],
     imageUrl: string
 }
