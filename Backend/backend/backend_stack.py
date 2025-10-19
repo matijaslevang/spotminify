@@ -253,6 +253,7 @@ class BackendStack(Stack):
                 "FILTER_ADD_LAMBDA": filter_add_lambda.function_name
             }
         )
+        filter_add_lambda.grant_invoke(create_artist_lambda)
 
         get_genres_lambda = _lambda.Function(
             self, "GetGenresLambda",
@@ -388,6 +389,31 @@ class BackendStack(Stack):
             authorization_type=apigw.AuthorizationType.COGNITO,
             authorizer=authorizer
         )
+
+        get_artist_lambda = _lambda.Function(
+            self, "GetArtistLambda",
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            handler="get_artist.handler",
+            code=_lambda.Code.from_asset("backend/lambdas/content"),
+            environment={
+                "ARTIST_TABLE": table_artists.table_name
+            }
+        )
+        table_artists.grant_read_data(get_artist_lambda)
+
+        get_artist = api.root.add_resource("get-artist",
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_origins=apigw.Cors.ALL_ORIGINS,
+                allow_methods=["GET", "OPTIONS"],
+                allow_headers=["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key"]
+            ))
+
+        get_artist.add_method(
+            "GET",
+            apigw.LambdaIntegration(get_artist_lambda),
+            authorization_type=apigw.AuthorizationType.COGNITO,
+            authorizer=authorizer
+        )
         
         albums = api.root.add_resource("albums",
             default_cors_preflight_options=apigw.CorsOptions(
@@ -469,6 +495,7 @@ class BackendStack(Stack):
             },
             #log_retention=logs.RetentionDays.ONE_WEEK
         )
+        filter_add_lambda.grant_invoke(create_album_lambda)
 
         # NEW create_single_lambda
         
@@ -485,6 +512,7 @@ class BackendStack(Stack):
             },
             #log_retention=logs.RetentionDays.ONE_WEEK
         )
+        filter_add_lambda.grant_invoke(create_single_lambda)
 
 
         albums.add_method(
