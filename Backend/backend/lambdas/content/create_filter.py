@@ -24,8 +24,8 @@ def handler(event, context):
         'contentType': content_type,
         'contentName': content_name,
         'imageUrl': image_url,
-        'contentGenres': json.dumps(content_genres),
-        'contentArtists': json.dumps(content_artists)
+        'contentGenres': content_genres,
+        'contentArtists': content_artists
     }
 
     if content_type == 'artist':
