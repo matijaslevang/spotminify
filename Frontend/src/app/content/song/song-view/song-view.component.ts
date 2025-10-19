@@ -14,30 +14,31 @@ import { UpdateSongComponent } from '../update-song/update-song.component';
 })
 export class SongViewComponent {
   song: Song = {
-    name: "",
-    artists: [],
+    title: "",
+    artistIds: [],
     genres: [],
-    imageUrl: "",
-    songUrl: "",
+    imageKey: "",
+    audioKey: "",
     rating: 4.5,
   }
-  songName: string = "";
+  songId: string = "";
   audioSrc: string | null = null;
   isPlaying = false;
   isAdmin = false;
   constructor(private contentService: ContentService, private router: Router, private cache: SongCacheService, private auth: AuthService, private dialog: MatDialog) {
     const navigation = this.router.getCurrentNavigation();
-    this.songName = navigation?.extras?.state?.['songName'];
-    console.log(this.songName)
+    this.songId = navigation?.extras?.state?.['songId'];
+    console.log(this.songId)
     this.auth.getUserRole().subscribe(r => this.isAdmin = (r === 'Admin' || r === 'ADMIN'));
   }
 
   async ngOnInit() {
-    const cached = await this.cache.getObjectUrl(this.song.songId!);
-    this.audioSrc = cached ?? this.song.songUrl; // preferiraj keš
-    this.contentService.getSong(this.songName).subscribe({
+    const cached = await this.cache.getObjectUrl(this.song.singleId!);
+    this.audioSrc = cached ?? this.song.audioKey; // preferiraj keš
+    this.contentService.getSong(this.songId).subscribe({
       next: (song: Song) => {
         this.song = song;
+        console.log(song)
       }
     })
   }
@@ -56,13 +57,13 @@ export class SongViewComponent {
   }
   
   async onDownload(){
-    await this.cache.download(this.song.songId!, this.song.songUrl);
-    this.audioSrc = await this.cache.getObjectUrl(this.song.songId!);
+    await this.cache.download(this.song.singleId!, this.song.audioKey);
+    this.audioSrc = await this.cache.getObjectUrl(this.song.singleId!);
   }
 
   async onRemove(){
-    await this.cache.remove(this.song.songId!);
-    this.audioSrc = this.song.songUrl;
+    await this.cache.remove(this.song.singleId!);
+    this.audioSrc = this.song.audioKey;
   }
   openEditSingle(){
   const ref = this.dialog.open(UpdateSongComponent, {
