@@ -17,35 +17,35 @@ export class ContentService {
     {
       artistId: "artist-1",
       name: "Lana Del Rey",
-      bio: "Known for her nostalgic and cinematic sound...",
+      biography: "Known for her nostalgic and cinematic sound...",
       genres: ["Indie Pop", "Dream Pop"],
       imageUrl: "https://picsum.photos/id/1011/200/200"
     },
     {
       artistId: "artist-2",
       name: "Kendrick Lamar",
-      bio: "Pulitzer-winning rapper known for his lyrical depth...",
+      biography: "Pulitzer-winning rapper known for his lyrical depth...",
       genres: ["Hip Hop", "Rap"],
       imageUrl: "https://picsum.photos/id/1027/200/200"
     },
     {
       artistId: "artist-3",
       name: "Adele",
-      bio: "British singer famous for her emotional ballads...",
+      biography: "British singer famous for her emotional ballads...",
       genres: ["Pop", "Soul"],
       imageUrl: "https://picsum.photos/id/1015/200/200"
     },
     {
       artistId: "artist-4",
       name: "Arctic Monkeys",
-      bio: "English indie rock band known for clever lyrics...",
+      biography: "English indie rock band known for clever lyrics...",
       genres: ["Indie Rock", "Alternative"],
       imageUrl: "https://picsum.photos/id/1031/200/200"
     },
     {
       artistId: "artist-5",
       name: "Billie Eilish",
-      bio: "Known for her whispery vocals and moody electropop sound.",
+      biography: "Known for her whispery vocals and moody electropop sound.",
       genres: ["Pop", "Electropop"],
       imageUrl: "https://picsum.photos/id/1047/200/200"
     }
@@ -133,8 +133,10 @@ export class ContentService {
     }
   ];
 
-  getArtist(name: string): Observable<Artist> {
-    return of(this.ARTISTS.find(v => v.name === name))
+  getArtist(artistId: string): Observable<Artist> {
+    return this.httpClient.get<Artist>(`${environment.apiUrl}/get-artist`, {
+      params: { artistId: artistId }
+    })
   }
 
   getSongsByArtist(artistName: string): Observable<Song[]> {
