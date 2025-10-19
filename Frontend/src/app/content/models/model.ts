@@ -7,12 +7,12 @@ export interface Artist {
 }
 
 export interface Song {
-    songId?: any;
-    name: string,
-    artists: string[],
+    singleId?: any;
+    title: string,
+    artistIds: string[],
     genres: string[],
-    imageUrl: string,
-    songUrl: string,
+    imageKey: string,
+    audioKey: string,
     rating: number,
 }
 
