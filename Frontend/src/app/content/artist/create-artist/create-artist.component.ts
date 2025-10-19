@@ -89,8 +89,8 @@ loadGenres(): void {
       return;
     }
 
-    const selectedGenreIds = this.formGroup.get('genres')?.value;    
-    console.log(selectedGenreIds)
+    const selectedGenreNames = this.formGroup.get('genres')?.value;    
+    console.log(selectedGenreNames)
 
     const reader = new FileReader();
     reader.onload = () => {
@@ -99,7 +99,7 @@ loadGenres(): void {
       const payload = {
         name: this.formGroup.get('name')?.value,
         biography: this.formGroup.get('biography')?.value,
-        genres: selectedGenreIds,
+        genres: selectedGenreNames,
         image: base64String,
         imageType: this.selectedFile!.type.split("/")[1]
       };
