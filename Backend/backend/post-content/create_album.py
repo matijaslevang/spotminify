@@ -52,15 +52,15 @@ def handler(event, _):
         }
         if coverKey:
             # opciono HEAD provera
-            album["coverKey"] = {"S": coverKey}
+            album["coverKey"] = {"S": f"https://{IMAGES_BUCKET}.s3.amazonaws.com/{coverKey}"}
      
         ddb.put_item(TableName=ALBUMS_TABLE, Item=album)
 
         payload = {
-            "contentId": album,
+            "contentId": albumId,
             "contentType": "album",
             "contentName": title,
-            "imageUrl": coverKey,
+            "imageUrl": f"https://{IMAGES_BUCKET}.s3.amazonaws.com/{coverKey}",
             "contentGenres": genres,
             "contentArtists": artistIds # TODO check this stuff out
         }
@@ -90,12 +90,12 @@ def handler(event, _):
                 "title":     {"S": stitle},
                 "artistIds": {"SS": sarts}  if sarts  else {"SS":[]},
                 "genres":    {"SS": sgenres}if sgenres else {"SS":[]},
-                "audioKey":  {"S": akey},
+                "audioKey":  {"S": f"https://{AUDIO_BUCKET}.s3.amazonaws.com/{akey}"},
                 "albumId":   {"S": albumId},
                 "createdAt": {"S": now},
             }
             if trno is not None: item["trackNo"] = {"N": str(int(trno))}
-            if ikey: item["imageKey"] = {"S": ikey}
+            if ikey: item["imageKey"] = {"S": f"https://{IMAGES_BUCKET}.s3.amazonaws.com/{ikey}"}
 
             ddb.put_item(TableName=SINGLES_TABLE, Item=item)
             created.append({"singleId": singleId, "trackNo": trno})
@@ -103,7 +103,7 @@ def handler(event, _):
                 "contentId": singleId,
                 "contentType": "single",
                 "contentName": stitle,
-                "imageUrl": ikey,
+                "imageUrl": f"https://{IMAGES_BUCKET}.s3.amazonaws.com/{ikey}",
                 "contentGenres": sgenres,
                 "contentArtists": sarts # TODO check this stuff out
             }
