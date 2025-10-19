@@ -18,11 +18,10 @@ export interface Song {
 
 export interface Album {
     albumId?: any;
-    name: string,
-    artists: string[],
+    title: string,
+    artistIds: string[],
     genres: string[],
-    imageUrl: string,
-    songsUrls: string[],
+    coverKey: string,
     rating: number,
 }
 
