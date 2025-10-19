@@ -16,7 +16,7 @@ export class ArtistViewComponent implements OnInit {
   artist: Artist;
   artistSongs: Song[] = [];
   artistAlbums: Album[] = [];
-  artistName: string;
+  artistId: string;
   
   isLoading = true;
   mySubscribedArtistIds = new Set<string>();
@@ -28,13 +28,13 @@ export class ArtistViewComponent implements OnInit {
     private auth: AuthService,
     private dialog: MatDialog,
   ) {
-    this.artistName = history.state.artistName;
-    console.log("Artist name from history.state:", this.artistName);
+    this.artistId = history.state.artistId;
+    console.log("Artist name from history.state:", this.artistId);
   }
 
   ngOnInit(): void {
-    if (this.artistName) {
-      this.loadArtistData(this.artistName);
+    if (this.artistId) {
+      this.loadArtistData(this.artistId);
       this.loadMySubscriptions();
       this.auth.getUserRole().subscribe(r => this.isAdmin = (r === 'Admin' || r === 'ADMIN'));
     } else {
@@ -49,9 +49,9 @@ export class ArtistViewComponent implements OnInit {
     });
     ref.afterClosed().subscribe(saved => { if (saved) this.loadArtistData(this.artist.name); });
   }
-  loadArtistData(artistName: string): void {
+  loadArtistData(artistId: string): void {
     this.isLoading = true;
-    this.contentService.getArtist(artistName).subscribe({
+    this.contentService.getArtist(artistId).subscribe({
       next: (artist: Artist) => {
         this.artist = artist;
         // Will be changed

@@ -13,7 +13,7 @@
                 </mat-chip-listbox>
             </div>
             
-            <p class="artist-bio">{{ artist.bio }}</p>
+            <p class="artist-bio">{{ artist.biography }}</p>
 
             <div class="subscription-button-container">
                 <button *ngIf="!isSubscribedTo(artist.artistId)" (click)="subscribeToArtist()" mat-button>
