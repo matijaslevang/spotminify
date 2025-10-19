@@ -238,7 +238,28 @@ class BackendStack(Stack):
             bucket_name=f"artist-images-{self.account}-{self.region}",
             removal_policy=RemovalPolicy.DESTROY,
             auto_delete_objects=True,
-            block_public_access=s3.BlockPublicAccess.BLOCK_ALL
+            block_public_access=s3.BlockPublicAccess.BLOCK_ACLS_ONLY,
+            cors=[
+                s3.CorsRule(
+                    allowed_methods=[
+                        s3.HttpMethods.PUT,
+                        s3.HttpMethods.POST,
+                        s3.HttpMethods.GET,
+                        s3.HttpMethods.HEAD,
+                    ],
+                    allowed_origins=["http://localhost:4200"],
+                    allowed_headers=["*"],
+                    exposed_headers=["ETag"]
+            )]
+        )
+
+        artist_bucket.add_to_resource_policy(
+            iam.PolicyStatement(
+                actions=["s3:GetObject"],
+                resources=[f"arn:aws:s3:::{artist_bucket.bucket_name}/*"],
+                effect=iam.Effect.ALLOW,
+                principals=[iam.ArnPrincipal("*")]
+            )
         )
 
         create_artist_lambda = _lambda.Function(
@@ -429,25 +450,59 @@ class BackendStack(Stack):
                 allow_headers=["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key"]
             ))
         
+        get_single_lambda = _lambda.Function(
+            self, "GetSingleLambda",
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            handler="get_single.handler",
+            code=_lambda.Code.from_asset("backend/lambdas/content"),
+            environment={
+                "SINGLE_TABLE": table_singles.table_name
+            }
+        )
+        table_singles.grant_read_data(get_single_lambda)
+
+        get_single = api.root.add_resource("get-single",
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_origins=apigw.Cors.ALL_ORIGINS,
+                allow_methods=["GET", "OPTIONS"],
+                allow_headers=["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key"]
+            ))
+
+        get_single.add_method(
+            "GET",
+            apigw.LambdaIntegration(get_single_lambda),
+            authorization_type=apigw.AuthorizationType.COGNITO,
+            authorizer=authorizer
+        )
+        
         audio_bucket = s3.Bucket(
             self, "SongFilesBucket",
             bucket_name=f"audio-files-{self.account}-{self.region}",
             removal_policy=RemovalPolicy.DESTROY,
             auto_delete_objects=True,
-            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            block_public_access=s3.BlockPublicAccess.BLOCK_ACLS_ONLY,
             cors=[
-        s3.CorsRule(
-            allowed_methods=[
-                s3.HttpMethods.PUT,
-                s3.HttpMethods.POST,
-                s3.HttpMethods.GET,
-                s3.HttpMethods.HEAD,
-            ],
-            allowed_origins=["http://localhost:4200"],
-            allowed_headers=["*"],
-            exposed_headers=["ETag"]
+                s3.CorsRule(
+                    allowed_methods=[
+                        s3.HttpMethods.PUT,
+                        s3.HttpMethods.POST,
+                        s3.HttpMethods.GET,
+                        s3.HttpMethods.HEAD,
+                    ],
+                    allowed_origins=["http://localhost:4200"],
+                    allowed_headers=["*"],
+                    exposed_headers=["ETag"]
+                )
+            ]
         )
-    ]
+
+        audio_bucket.add_to_resource_policy(
+            iam.PolicyStatement(
+                actions=["s3:GetObject"],
+                resources=[f"arn:aws:s3:::{audio_bucket.bucket_name}/*"],
+                effect=iam.Effect.ALLOW,
+                principals=[iam.ArnPrincipal("*")]
+            )
         )
         
         images_bucket = s3.Bucket(
@@ -455,14 +510,29 @@ class BackendStack(Stack):
             bucket_name=f"song-images-{self.account}-{self.region}",
             removal_policy=RemovalPolicy.DESTROY,
             auto_delete_objects=True,
-            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            block_public_access=s3.BlockPublicAccess.BLOCK_ACLS_ONLY,
             cors=[
                 s3.CorsRule(
-                    allowed_methods=[s3.HttpMethods.PUT],
+                    allowed_methods=[
+                        s3.HttpMethods.PUT,
+                        s3.HttpMethods.POST,
+                        s3.HttpMethods.GET,
+                        s3.HttpMethods.HEAD,
+                    ],
                     allowed_origins=["http://localhost:4200"],
                     allowed_headers=["*"],
+                    exposed_headers=["ETag"]
                 )
-    ]
+            ]
+        )
+
+        images_bucket.add_to_resource_policy(
+            iam.PolicyStatement(
+                actions=["s3:GetObject"],
+                resources=[f"arn:aws:s3:::{images_bucket.bucket_name}/*"],
+                effect=iam.Effect.ALLOW,
+                principals=[iam.ArnPrincipal("*")]
+            )
         )
         
         # audio_bucket.add_cors_rule(
