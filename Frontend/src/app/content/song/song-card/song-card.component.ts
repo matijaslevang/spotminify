@@ -11,11 +11,11 @@ import { AuthService } from '../../../auth/auth.service';
 export class SongCardComponent implements AfterViewInit {
   @ViewChild('songCardImage') songImageRef!: ElementRef<HTMLImageElement>;
   @Input() song: Song = {
-    name: '',
-    artists: [],
+    title: '',
+    artistIds: [],
     genres: [],
-    imageUrl: '',
-    songUrl: '',
+    imageKey: '',
+    audioKey: '',
     rating: 0
   };
   @Input() filterDetails: FilterDetails
@@ -31,10 +31,10 @@ export class SongCardComponent implements AfterViewInit {
       error: () => this.isAdmin = false
     });
     if (this.filterDetails) {
-      this.song.name = this.filterDetails.contentName
-      this.song.songId = this.filterDetails.contentId
-      this.song.imageUrl = this.filterDetails.imageUrl
-      this.song.artists = this.filterDetails.contentArtists
+      this.song.title = this.filterDetails.contentName
+      this.song.singleId = this.filterDetails.contentId
+      this.song.imageKey = this.filterDetails.imageUrl
+      this.song.artistIds = this.filterDetails.contentArtists
       this.song.genres = this.filterDetails.contentGenres
     }
   }
@@ -51,11 +51,11 @@ export class SongCardComponent implements AfterViewInit {
   }
 
   viewSong(): void {
-    this.router.navigate(["/song"], {state: { songName: this.song.name}});
+    this.router.navigate(["/song"], {state: { songId: this.song.singleId}});
   }
   
   confirmDelete() {
-    if (confirm(`Delete ${this.song.name}?`)) {
+    if (confirm(`Delete ${this.song.title}?`)) {
       console.log('delete'); // TODO: pozovi servis za brisanje
     }
   }
