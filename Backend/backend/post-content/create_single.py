@@ -54,14 +54,14 @@ def handler(event, _):
             "title":     {"S": title},
             "artistIds": {"SS": artistIds} if artistIds else {"SS":[]},
             "genres":    {"SS": genres}    if genres    else {"SS":[]},
-            "audioKey":  {"S": audio_key},
+            "audioKey":  {"S": f"https://{audio_bucket}.s3.amazonaws.com/{audio_key}"},
             "explicit":  {"BOOL": explicit},
             "createdAt": {"S": now},
         }
         if imageKey:
             # opciono HEAD i ovde
             img_bucket, img_key = imageKey.split("/", 1) if imageKey.startswith("s3://") else (os.environ["IMAGES_BUCKET"], imageKey)
-            item["imageKey"] = {"S": img_key}
+            item["imageKey"] = {"S": f"https://{img_bucket}.s3.amazonaws.com/{img_key}"}
         if albumId: item["albumId"] = {"S": albumId}
         if trackNo is not None: item["trackNo"] = {"N": str(int(trackNo))}
 
@@ -71,7 +71,7 @@ def handler(event, _):
             "contentId": singleId,
             "contentType": "single",
             "contentName": title,
-            "imageUrl": imageKey,
+            "imageUrl": f"https://{img_bucket}.s3.amazonaws.com/{img_key}",
             "contentGenres": genres,
             "contentArtists": artistIds # TODO check this stuff out
         }
