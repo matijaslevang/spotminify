@@ -134,7 +134,6 @@ class BackendStack(Stack):
 
         filter_by_genre_lambda = _lambda.Function(
             self, 'FilterByGenreLambda',
-            function_name="FilterByGenreLambda",
             runtime=_lambda.Runtime.PYTHON_3_9,
             handler='filter_by_genre.handler',
             code=_lambda.Code.from_asset("backend/lambdas/content"),
@@ -154,7 +153,6 @@ class BackendStack(Stack):
 
         filter_by_artist_lambda = _lambda.Function(
             self, 'FilterByArtistLambda',
-            function_name="FilterByArtistLambda",
             runtime=_lambda.Runtime.PYTHON_3_9,
             handler='filter_by_artist.handler',
             code=_lambda.Code.from_asset("backend/lambdas/content"),
@@ -167,7 +165,6 @@ class BackendStack(Stack):
 
         filter_add_lambda = _lambda.Function(
             self, 'FilterAddLambda',
-            function_name="FilterAddLambda",
             runtime=_lambda.Runtime.PYTHON_3_9,
             handler='create_filter.handler',
             code=_lambda.Code.from_asset("backend/lambdas/content"),
@@ -270,7 +267,6 @@ class BackendStack(Stack):
 
         create_artist_lambda = _lambda.Function(
             self, "CreateArtistLambda",
-            function_name="CreateArtistLambda",
             runtime=_lambda.Runtime.PYTHON_3_9,
             handler="create_artist.handler",
             code=_lambda.Code.from_asset("backend/lambdas/content"),
@@ -691,7 +687,6 @@ class BackendStack(Stack):
 
         get_feed_lambda = _lambda.Function(
             self, "GetFeedLambda",
-            function_name="GetFeedLambda",
             runtime=_lambda.Runtime.PYTHON_3_9,
             handler="get_feed.handler",
             code=_lambda.Code.from_asset("backend/lambdas/feed"),
@@ -711,7 +706,6 @@ class BackendStack(Stack):
 
         update_feed_added_content_lambda = _lambda.Function(
             self, "UpdateFeedAddedContentLambda",
-            function_name="UpdateFeedAddedContentLambda",
             runtime=_lambda.Runtime.PYTHON_3_9,
             handler="update_feed_added_content.handler",
             code=_lambda.Code.from_asset("backend/lambdas/feed"),
@@ -734,7 +728,6 @@ class BackendStack(Stack):
 
         update_feed_score_specific_user_lambda = _lambda.Function(
             self, "UpdateFeedScoreSpecificUserLambda",
-            function_name="UpdateFeedScoreSpecificUserLambda",
             runtime=_lambda.Runtime.PYTHON_3_9,
             handler="update_feed_score_specific_user.handler",
             code=_lambda.Code.from_asset("backend/lambdas/feed"),
@@ -747,7 +740,6 @@ class BackendStack(Stack):
 
         update_feed_specific_user_lambda = _lambda.Function(
             self, "UpdateFeedSpecificUserLambda",
-            function_name="UpdateFeedSpecificUserLambda",
             runtime=_lambda.Runtime.PYTHON_3_9,
             handler="update_feed_specific_user.handler",
             code=_lambda.Code.from_asset("backend/lambdas/feed"),
