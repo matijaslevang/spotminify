@@ -16,18 +16,21 @@ def handler(event, context):
             return {"statusCode": 401, "body": json.dumps({"error": "Unauthorized"})}
 
         body = json.loads(event.get("body", "{}"))
-        target_id = body.get("targetId")
-        target_name = body.get("targetName")
+        targetId = body.get("targetId")
         subscription_type = body.get("subscriptionType")
+        artist_name = body.get("artistName")
+        image_url = body.get("imageUrl")
 
-        if not target_id or not subscription_type:
+
+        if not targetId or not subscription_type:
             return {"statusCode": 400, "body": json.dumps({"error": "targetId and subscriptionType are required"})}
 
         table.put_item(
             Item={
                 'username': username,
-                'targetId': target_id,
-                'targetName': target_name,
+                'targetId': targetId,
+                'artistName': artist_name,
+                'imageUrl': image_url,
                 'subscriptionType': subscription_type,
                 'subscribedAt': datetime.utcnow().isoformat()
             }

@@ -93,7 +93,7 @@ export class ArtistViewComponent implements OnInit {
 
   subscribeToArtist(): void {
     if (!this.artist?.artistId) return;
-    const payload = { targetId: this.artist.artistId, subscriptionType: 'ARTIST' };
+    const payload = { targetId: this.artist.artistId, subscriptionType: 'ARTIST', artistName: this.artist.name, imageUrl: this.artist.imageUrl };
     this.contentService.subscribe(payload).subscribe({
       next: () => {
         this.mySubscribedArtistIds.add(this.artist.artistId);

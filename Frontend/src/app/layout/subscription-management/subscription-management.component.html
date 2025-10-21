@@ -16,8 +16,8 @@
       <div class="subscription-list">
         <mat-card *ngFor="let sub of artistSubscriptions" class="subscription-card">
           <mat-card-header>
-            <img mat-card-avatar [src]="sub.imageUrl" [alt]="sub.targetName">
-            <p>{{ sub.targetName }}</p>
+            <img mat-card-avatar [src]="sub.imageUrl" [alt]="sub.artistName">
+            <p>{{ sub.artistName }}</p>
           </mat-card-header>
           <mat-card-actions align="end">
             <button mat-icon-button color="warn" (click)="unsubscribe(sub)" aria-label="Unsubscribe">
@@ -35,7 +35,7 @@
             <div mat-card-avatar class="genre-avatar">
               <mat-icon>music_note</mat-icon>
             </div>
-            <p>{{ sub.targetName }}</p>
+            <p>{{ sub.targetId }}</p>
           </mat-card-header>
           <mat-card-actions align="end">
             <button mat-icon-button color="warn" (click)="unsubscribe(sub)" aria-label="Unsubscribe">

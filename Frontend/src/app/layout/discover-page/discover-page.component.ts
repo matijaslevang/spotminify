@@ -13,7 +13,7 @@ export class DiscoverPageComponent {
   resultSongs: FilterDetails[] = []
   resultArtists: FilterDetails[] = []
   resultAlbums: FilterDetails[] = []
-  mySubscribedGenreIds = new Set<string>();
+  mySubscribedGenres = new Set<string>();
   
   genres: Genre[] = []
 
@@ -35,12 +35,12 @@ export class DiscoverPageComponent {
     })
     this.contentService.getMySubscriptions().subscribe({
       next: (subscriptions) => {
-        this.mySubscribedGenreIds = new Set(
+        this.mySubscribedGenres = new Set(
           subscriptions
             .filter(sub => sub.subscriptionType === 'GENRE')
             .map(sub => sub.targetId)
         );
-        console.log(this.mySubscribedGenreIds)
+        console.log(this.mySubscribedGenres)
       },
       error: (err) => console.error("Could not load user's subscriptions", err)
     });
@@ -61,8 +61,8 @@ export class DiscoverPageComponent {
     
   }
 
-  isSubscribedTo(genreId: string): boolean {
-    return this.mySubscribedGenreIds.has(genreId);
+  isSubscribedTo(genre: string): boolean {
+    return this.mySubscribedGenres.has(genre);
   }
 
   subscribeToGenre(): void {
@@ -74,14 +74,13 @@ export class DiscoverPageComponent {
     }
 
     const payload = {
-      targetId: selectedGenre.genreId,
-      targetName: selectedGenre.genreName,
+      targetId: selectedGenre.genreName,
       subscriptionType: 'GENRE'
     };
 
     this.contentService.subscribe(payload).subscribe({
       next: () => {
-        this.mySubscribedGenreIds.add(selectedGenre.genreId);
+        this.mySubscribedGenres.add(selectedGenre.genreName);
         this.snackBar.open(`Successfully subscribed to ${selectedGenre.genreName}!`, 'Close', {
           duration: 3000,
           panelClass: ['success-snackbar']
@@ -101,9 +100,9 @@ export class DiscoverPageComponent {
     const selectedGenre = this.filterForm.get('genre')?.value;
     if (!selectedGenre) return;
 
-    this.contentService.unsubscribe(selectedGenre.genreId).subscribe({
+    this.contentService.unsubscribe(selectedGenre.genreName).subscribe({
       next: () => {
-        this.mySubscribedGenreIds.delete(selectedGenre.genreId);
+        this.mySubscribedGenres.delete(selectedGenre.genreName);
         this.snackBar.open(`Unsubscribed from ${selectedGenre.genreName}`, 'Close', { duration: 3000 });
       },
       error: (err) => {

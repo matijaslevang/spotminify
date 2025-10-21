@@ -48,7 +48,7 @@ export class SubscriptionManagementComponent implements OnInit {
           this.genreSubscriptions = this.genreSubscriptions.filter(s => s.targetId !== subscription.targetId);
         }
         
-        this.snackBar.open(`Unsubscribed from ${subscription.targetName}`, 'Close', { duration: 2000 });
+        this.snackBar.open(`Succesfully unsubscribed!`, 'Close', { duration: 2000 });
       },
       error: (err) => {
         console.error('Failed to unsubscribe', err);

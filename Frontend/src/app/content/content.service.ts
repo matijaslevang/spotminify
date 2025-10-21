@@ -74,7 +74,7 @@ export class ContentService {
     return this.httpClient.get<any[]>(`${environment.apiUrl}/subscriptions`);
   }
 
-  subscribe(payload: { targetId: string, subscriptionType: string }): Observable<any> {
+  subscribe(payload: { targetId: string, subscriptionType: string, artistName?: string, imageUrl?: string}): Observable<any> {
     return this.httpClient.post(`${environment.apiUrl}/subscriptions`, payload);
   }
 
