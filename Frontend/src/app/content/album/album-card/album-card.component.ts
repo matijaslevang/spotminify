@@ -3,6 +3,7 @@ import { Album, FilterDetails } from '../../models/model';
 import { Router } from '@angular/router';
 import { FastAverageColor } from 'fast-average-color';
 import { AuthService } from '../../../auth/auth.service';
+import { ContentService } from '../../content.service';
 @Component({
   selector: 'app-album-card',
   templateUrl: './album-card.component.html',
@@ -21,7 +22,7 @@ export class AlbumCardComponent {
   isAdmin: boolean = false;
   dominantColor: string = "#ffffff";
 
-  constructor(private router: Router, private auth: AuthService) {}
+  constructor(private router: Router, private auth: AuthService, private contentService: ContentService) {}
 
   ngOnInit() {
     this.auth.getUserRole().subscribe({
@@ -56,10 +57,21 @@ export class AlbumCardComponent {
   viewAlbum(): void {
     this.router.navigate(["/album"], {state: { albumId: this.album.albumId }});
   }
-  
-  confirmDelete(){ 
-    if(confirm(`Delete ${this.album.title}?`)) //this.deleteAlbum();
-      console.log('delete')   
-    }
+
+  confirmDelete() { 
+      if(this.album.albumId && confirm(`Delete ${this.album.title} and all its songs?`)) {
+          this.contentService.deleteAlbum(this.album.albumId).subscribe({
+              next: (response) => {
+                  console.log('Album deleted successfully', response);
+                  alert('Album i sve pesme uspešno obrisani!');
+                  // TODO: Dodati navigaciju ili osvežavanje liste albuma
+              },
+              error: (error) => {
+                  console.error('Error deleting album:', error);
+                  alert(`Greška pri brisanju: ${error.message || error.statusText}`);
+              }
+          });
+      }
+  }
 
 }

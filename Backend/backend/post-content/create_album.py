@@ -37,14 +37,19 @@ def handler(event, _):
         tracks    = data.get("tracks") or []
 
         if not title:  return {"statusCode":400,"headers":cors(),"body":json.dumps({"error":"title required"})}
+        if not artistIds: return {"statusCode":400,"headers":cors(),"body":json.dumps({"error":"artistIds required"})} # <--- DODATO: Validacija za PK
         if not tracks: return {"statusCode":400,"headers":cors(),"body":json.dumps({"error":"tracks required"})}
-
+        
+        # KLJUČNA IZMENA 1: Ekstrakcija Partition Key-a
+        pk_artist_id = artistIds[0]
+        
         albumId = f"alb-{uuid.uuid4()}"
         now = datetime.datetime.utcnow().isoformat()
 
         # album item
         album = {
-            "albumId":   {"S": albumId},
+            "artistId":  {"S": pk_artist_id},      # <--- DODATO: Partition Key za ALBUMS_TABLE
+            "albumId":   {"S": albumId},           # <--- Sort Key za ALBUMS_TABLE
             "title":     {"S": title},
             "artistIds": {"SS": artistIds} if artistIds else {"SS":[]},
             "genres":    {"SS": genres}    if genres    else {"SS":[]},
@@ -84,9 +89,12 @@ def handler(event, _):
             if not _exists(AUDIO_BUCKET, akey):
                 continue
 
+            single_pk_artist_id = sarts[0] if sarts else pk_artist_id # Koristi se za Single PK
+            
             singleId = f"sin-{uuid.uuid4()}"
             item = {
-                "singleId":  {"S": singleId},
+                "artistId":  {"S": single_pk_artist_id}, # <--- DODATO: Partition Key za SINGLES_TABLE
+                "singleId":  {"S": singleId},            # <--- Sort Key za SINGLES_TABLE
                 "title":     {"S": stitle},
                 "artistIds": {"SS": sarts}  if sarts  else {"SS":[]},
                 "genres":    {"SS": sgenres}if sgenres else {"SS":[]},

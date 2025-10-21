@@ -38,9 +38,12 @@ def handler(event, _):
         trackNo   = data.get("trackNo")
         explicit  = bool(data.get("explicit", False))
 
-        if not title:    return {"statusCode":400,"headers":cors(),"body":json.dumps({"error":"title required"})}
-        if not audioKey: return {"statusCode":400,"headers":cors(),"body":json.dumps({"error":"audioKey required"})}
-
+        if not title:       return {"statusCode":400,"headers":cors(),"body":json.dumps({"error":"title required"})}
+        if not artistIds:   return {"statusCode":400,"headers":cors(),"body":json.dumps({"error":"artistIds required"})} # <--- DODATO: Validacija za artistId listu
+        if not audioKey:    return {"statusCode":400,"headers":cors(),"body":json.dumps({"error":"audioKey required"})}
+        
+        pk_artist_id = artistIds[0]
+        
         # Validacija da objekat postoji (opciono: izvuci ContentLength/ContentType)
         audio_bucket, audio_key = audioKey.split("/", 1) if audioKey.startswith("s3://") else (os.environ["AUDIO_BUCKET"], audioKey)
         if not _head_exists(audio_bucket, audio_key):
@@ -50,7 +53,8 @@ def handler(event, _):
         singleId = f"sin-{uuid.uuid4()}"
 
         item = {
-            "singleId":  {"S": singleId},
+            "artistId":  {"S": pk_artist_id},      # <--- DODATO: Partition Key (PK)
+            "singleId":  {"S": singleId},          # <--- Sort Key (SK)
             "title":     {"S": title},
             "artistIds": {"SS": artistIds} if artistIds else {"SS":[]},
             "genres":    {"SS": genres}    if genres    else {"SS":[]},

@@ -3,6 +3,7 @@ import { FilterDetails, Song } from '../../models/model';
 import { FastAverageColor } from 'fast-average-color';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../auth/auth.service';
+import { ContentService } from '../../content.service';
 @Component({
   selector: 'app-song-card',
   templateUrl: './song-card.component.html',
@@ -23,7 +24,7 @@ export class SongCardComponent implements AfterViewInit {
   dominantColor: string = "#ffffff";
   isAdmin = false;
 
-  constructor(private router: Router, private auth: AuthService) {}
+  constructor(private router: Router, private auth: AuthService, private contentService: ContentService) {}
 
   ngOnInit() {
     this.auth.getUserRole().subscribe({
@@ -53,10 +54,21 @@ export class SongCardComponent implements AfterViewInit {
   viewSong(): void {
     this.router.navigate(["/song"], {state: { songId: this.song.singleId}});
   }
+    confirmDelete() {
+     // Provera da li postoji ID i da li je korisnik Admin (iako je dugme već skriveno, dobra je praksa)
+     if (this.isAdmin && this.song.singleId && confirm(`Delete ${this.song.title}?`)) {
+         this.contentService.deleteSingle(this.song.singleId).subscribe({
+         next: (response) => {
+          console.log('Song deleted successfully', response);
+         alert('Pesma uspešno obrisana!');
+         // TODO: Dodajte logiku za osvežavanje liste pesama nakon brisanja (npr. emitovanje eventa)
+         },
+         error: (error) => {
+          console.error('Error deleting song:', error);
+          alert(`Greška pri brisanju: ${error.message || error.statusText}`);
+        }
+       });
+       }
+   }
   
-  confirmDelete() {
-    if (confirm(`Delete ${this.song.title}?`)) {
-      console.log('delete'); // TODO: pozovi servis za brisanje
-    }
-  }
 }

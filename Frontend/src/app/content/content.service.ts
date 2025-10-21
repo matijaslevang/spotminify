@@ -18,6 +18,22 @@ export class ContentService {
       params: { artistId: artistId }
     })
   }
+  
+  getArtists(): Observable<Artist[]> {
+    return this.httpClient.get<Artist[]>(`${environment.apiUrl}/artists-all`)
+  }
+
+  deleteSingle(singleId: string): Observable<any> {
+    return this.httpClient.delete(`${environment.apiUrl}/singles/${singleId}`);
+   }
+  
+   deleteAlbum(albumId: string): Observable<any> {
+    return this.httpClient.delete(`${environment.apiUrl}/albums/${albumId}`);
+  }
+
+  deleteArtist(artistId: string): Observable<any> {
+      return this.httpClient.delete(`${environment.apiUrl}/artists/${artistId}`);
+  }
 
   getSongsByArtist(artistName: string): Observable<Song[]> {
     return of(null) // TODO
