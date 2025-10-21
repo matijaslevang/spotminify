@@ -13,7 +13,8 @@ from aws_cdk import (
     custom_resources as cr,
     aws_sns as sns,
     aws_sns_subscriptions as sns_subscriptions,
-    aws_logs as logs
+    aws_logs as logs,
+    CfnOutput
 )
 
 import uuid
@@ -45,6 +46,16 @@ class BackendStack(Stack):
             auto_verify=cognito.AutoVerifiedAttrs(email=True),
             removal_policy=RemovalPolicy.DESTROY
         )
+
+        user_pool_client = cognito.UserPoolClient(
+            self, "NewUserPoolClient",
+            user_pool=self.user_pool,
+            auth_flows=cognito.AuthFlow(
+                user_srp=True
+             )
+        )
+
+        CfnOutput(self, "UserPoolClientId", value=user_pool_client.user_pool_client_id)
 
         table_subscriptions = dynamodb.Table(
             self, "Subscriptions",
@@ -211,11 +222,6 @@ class BackendStack(Stack):
             ])
         )
 
-        # 2. User Pool Client
-        user_pool_client = cognito.UserPoolClient(
-            self, "NewUserPoolClient",
-            user_pool=self.user_pool
-        )
 
         pre_signup_lambda = _lambda.Function(
             self, "PreSignUpLambda",
