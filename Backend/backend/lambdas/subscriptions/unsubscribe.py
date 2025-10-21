@@ -14,15 +14,15 @@ def handler(event, context):
         if not username:
             return {"statusCode": 401, "body": json.dumps({"error": "Unauthorized"})}
 
-        target_id = event.get("pathParameters", {}).get("targetId")
+        targetId = event.get("pathParameters", {}).get("targetId")
 
-        if not target_id:
+        if not targetId:
             return {"statusCode": 400, "body": json.dumps({"error": "targetId is required in path"})}
 
         table.delete_item(
             Key={
                 'username': username,
-                'targetId': target_id
+                'targetId': targetId
             }
         )
         

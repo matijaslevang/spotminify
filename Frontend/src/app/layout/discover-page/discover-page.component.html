@@ -17,7 +17,7 @@
             <h3>Selected Genre</h3>
             <p class="genre-name">{{ filterForm.get('genre')?.value?.genreName }}</p>
             <button
-                *ngIf="isSubscribedTo(filterForm.get('genre')?.value?.genreId)"
+                *ngIf="isSubscribedTo(filterForm.get('genre')?.value?.genreName)"
                 mat-flat-button
                 color="warn"
                 class="btn-primary btn-subscribe" 
@@ -26,7 +26,7 @@
                 Unsubscribe
             </button>
             <button
-                *ngIf="!isSubscribedTo(filterForm.get('genre')?.value?.genreId)"
+                *ngIf="!isSubscribedTo(filterForm.get('genre')?.value?.genreName)"
                 mat-button
                 class="btn-primary btn-subscribe" 
                 type="button" 
