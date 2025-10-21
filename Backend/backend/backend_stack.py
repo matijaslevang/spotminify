@@ -2,6 +2,7 @@ from constructs import Construct
 from aws_cdk import (
     RemovalPolicy,
     Stack,
+    Duration,
     aws_apigateway as apigw,
     aws_cognito as cognito,
     aws_lambda as _lambda,
@@ -114,21 +115,36 @@ class BackendStack(Stack):
             removal_policy=RemovalPolicy.DESTROY
         )
 
-        table_albums = dynamodb.Table(
-            self, "Albums",
-            partition_key=dynamodb.Attribute(name="albumId", type=dynamodb.AttributeType.STRING),
-            #partition_key=dynamodb.Attribute(name="artistId", type=dynamodb.AttributeType.STRING),
-            #sort_key=dynamodb.Attribute(name="albumId", type=dynamodb.AttributeType.STRING),
+        # table_albums = dynamodb.Table(
+        #     self, "Albums",
+        #     partition_key=dynamodb.Attribute(name="albumId", type=dynamodb.AttributeType.STRING),
+        #     #partition_key=dynamodb.Attribute(name="artistId", type=dynamodb.AttributeType.STRING),
+        #     #sort_key=dynamodb.Attribute(name="albumId", type=dynamodb.AttributeType.STRING),
+        #     removal_policy=RemovalPolicy.DESTROY
+        # )
+        table_albums = dynamodb.Table(self, "Albums",
+            # Primarni ključ je sada Composite (PK: artistId, SK: albumId)
+            partition_key=dynamodb.Attribute(name="artistId", type=dynamodb.AttributeType.STRING),
+            sort_key=dynamodb.Attribute(name="albumId", type=dynamodb.AttributeType.STRING),
             removal_policy=RemovalPolicy.DESTROY
         )
         
-        table_singles = dynamodb.Table(
-            self, "Singles",
-            partition_key=dynamodb.Attribute(name="singleId", type=dynamodb.AttributeType.STRING),
-            #partition_key=dynamodb.Attribute(name="artistId", type=dynamodb.AttributeType.STRING),
-            #sort_key=dynamodb.Attribute(name="singleId", type=dynamodb.AttributeType.STRING),
+        # table_singles = dynamodb.Table(
+        #     self, "Singles",
+        #     partition_key=dynamodb.Attribute(name="singleId", type=dynamodb.AttributeType.STRING),
+        #     #partition_key=dynamodb.Attribute(name="artistId", type=dynamodb.AttributeType.STRING),
+        #     #sort_key=dynamodb.Attribute(name="singleId", type=dynamodb.AttributeType.STRING),
+        #     removal_policy=RemovalPolicy.DESTROY
+        # )
+        table_singles = dynamodb.Table(self, "Singles",
+            # Primarni ključ je sada Composite (PK: artistId, SK: singleId)
+            partition_key=dynamodb.Attribute(name="artistId", type=dynamodb.AttributeType.STRING),
+            sort_key=dynamodb.Attribute(name="singleId", type=dynamodb.AttributeType.STRING),
             removal_policy=RemovalPolicy.DESTROY
         )
+        # NAPOMENA: Ako ste ranije imali GSI na SinglesTable gde je PK bio 'artistId',
+        # sada taj GSI možete da uklonite! (Novi primarni ključ ga zamenjuje)
+        
         table_singles.add_global_secondary_index(
             index_name="by-album-id",
             partition_key=dynamodb.Attribute(name="albumId", type=dynamodb.AttributeType.STRING),
@@ -408,7 +424,7 @@ class BackendStack(Stack):
         artists = api.root.add_resource("artists",
             default_cors_preflight_options=apigw.CorsOptions(
                 allow_origins=apigw.Cors.ALL_ORIGINS,
-                allow_methods=["GET", "POST", "OPTIONS"],
+                allow_methods=["GET", "POST" ,"DELETE", "OPTIONS"],
                 allow_headers=["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key"]
             ))
 
@@ -444,17 +460,42 @@ class BackendStack(Stack):
             authorizer=authorizer
         )
         
+        get_artists_lambda = _lambda.Function(
+            self, "GetArtistsLambda",
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            handler="get_artists.handler",
+            code=_lambda.Code.from_asset("backend/lambdas/content"), 
+            environment={
+                "ARTISTS_TABLE_NAME": table_artists.table_name # Koristi ime tabele
+            }
+        )
+        table_artists.grant_read_data(get_artists_lambda)    
+        get_artists_all = api.root.add_resource("artists-all",
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_origins=apigw.Cors.ALL_ORIGINS,
+                allow_methods=["GET", "OPTIONS"],
+                allow_headers=["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key"]
+            )
+        )
+
+        get_artists_all.add_method(
+            "GET",
+            apigw.LambdaIntegration(get_artists_lambda),
+            authorization_type=apigw.AuthorizationType.COGNITO,
+            authorizer=authorizer
+        )
+        
         albums = api.root.add_resource("albums",
             default_cors_preflight_options=apigw.CorsOptions(
                 allow_origins=apigw.Cors.ALL_ORIGINS,
-                allow_methods=["GET", "POST","PUT", "OPTIONS"],
+                allow_methods=["GET", "POST","PUT","DELETE", "OPTIONS"],
                 allow_headers=["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key"]
             ))
 
         singles = api.root.add_resource("singles",
             default_cors_preflight_options=apigw.CorsOptions(
                 allow_origins=apigw.Cors.ALL_ORIGINS,
-                allow_methods=["GET", "POST", "PUT", "OPTIONS"],
+                allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
                 allow_headers=["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key"]
             ))
         
@@ -548,7 +589,7 @@ class BackendStack(Stack):
                         s3.HttpMethods.GET,
                         s3.HttpMethods.HEAD,
                     ],
-                    allowed_origins=["http://localhost:4200"],
+                    allowed_origins=["*"],#allowed_origins=["http://localhost:4200"],
                     allowed_headers=["*"],
                     exposed_headers=["ETag"]
                 )
@@ -609,6 +650,173 @@ class BackendStack(Stack):
         #     max_age=3000,
         # )
         # NEW create_album_lambda
+        
+        delete_single_lambda = _lambda.Function(
+            self, "DeleteSingleLambda",
+            function_name="DeleteSingleLambda",
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            handler="delete_single.handler", # Ovo će biti fajl backend/lambdas/content/delete_single.py
+            code=_lambda.Code.from_asset("backend/lambdas/content"),
+            timeout= Duration.seconds(10), # dodati import cdk gore ako nije
+            environment={
+                "SINGLES_TABLE": table_singles.table_name,
+                "AUDIO_BUCKET": audio_bucket.bucket_name,
+                "IMAGES_BUCKET": images_bucket.bucket_name,
+                # Za kompleksno brisanje (brisati i iz indexa)
+                "GENRE_INDEX_TABLE": table_genre_index.table_name, 
+                "ARTIST_INDEX_TABLE": table_artist_index.table_name,
+            }
+        )
+        
+        # Dozvole za DynamoDB i S3
+        table_singles.grant_write_data(delete_single_lambda) # Dozvola za DELETE ITEM iz Singles
+        table_singles.grant_read_data(delete_single_lambda)
+        audio_bucket.grant_delete(delete_single_lambda)      # Dozvola za s3:DeleteObject iz audio bucketa
+        images_bucket.grant_delete(delete_single_lambda)     # Dozvola za s3:DeleteObject iz image bucketa
+
+        # Dozvole za brisanje iz filter indexa (GenreIndex i ArtistIndex)
+        table_genre_index.grant_write_data(delete_single_lambda)
+        table_artist_index.grant_write_data(delete_single_lambda)
+        
+        # Kreiranje podresursa /singles/{singleId}
+        single_id_resource = singles.add_resource("{singleId}",
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_origins=apigw.Cors.ALL_ORIGINS,
+                allow_methods=["GET", "DELETE", "OPTIONS"], # Definisanje dozvoljenih metoda na ovom resursu
+                allow_headers=["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key"]
+            ))
+
+        # Povezivanje DELETE metode na /singles/{singleId} sa DeleteSingleLambda
+        single_id_resource.add_method(
+            "DELETE",
+            apigw.LambdaIntegration(delete_single_lambda),
+            authorization_type=apigw.AuthorizationType.COGNITO,
+            authorizer=authorizer
+        )
+        
+        delete_album_lambda = _lambda.Function(
+            self, "DeleteAlbumLambda",
+            function_name="DeleteAlbumLambda",
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            handler="delete_album.handler",
+            code=_lambda.Code.from_asset("backend/lambdas/content"),
+            timeout=Duration.seconds(30), # Duže vreme, jer radi kaskadno brisanje
+            environment={
+                "ALBUMS_TABLE": table_albums.table_name,
+                "SINGLES_TABLE": table_singles.table_name, # Potrebno za brisanje singlova
+                "AUDIO_BUCKET": audio_bucket.bucket_name,
+                "IMAGES_BUCKET": images_bucket.bucket_name,
+                "GENRE_INDEX_TABLE": table_genre_index.table_name,
+                "ARTIST_INDEX_TABLE": table_artist_index.table_name,
+            }
+        )
+
+        # 2. Dozvole
+        # A. Dozvole za ALBUMS tabelu (Čitanje i Brisanje)
+        table_albums.grant_read_data(delete_album_lambda)
+        table_albums.grant_write_data(delete_album_lambda)
+        
+        # B. Dozvole za SINGLES tabelu (Čitanje/Query i Brisanje)
+        table_singles.grant_read_data(delete_album_lambda) 
+        table_singles.grant_write_data(delete_album_lambda)
+        # Dozvola za Query na GSI-ju 'AlbumIndex' (Ako je GSI na Singles)
+        delete_album_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["dynamodb:Query"],
+                resources=[f"{table_singles.table_arn}/index/*"] # Dozvola za query na svim indeksima
+            )
+        )
+
+        # C. Dozvole za S3, Indekse
+        images_bucket.grant_delete(delete_album_lambda)
+        audio_bucket.grant_delete(delete_album_lambda)
+        table_genre_index.grant_write_data(delete_album_lambda)
+        table_artist_index.grant_write_data(delete_album_lambda)
+        
+        album_id_resource = albums.add_resource("{albumId}",
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_origins=apigw.Cors.ALL_ORIGINS,
+                allow_methods=["GET", "DELETE", "OPTIONS"],
+                allow_headers=["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key"]
+            ))
+
+        # Povezivanje DELETE metode na /albums/{albumId} sa DeleteAlbumLambda
+        album_id_resource.add_method(
+            "DELETE",
+            apigw.LambdaIntegration(delete_album_lambda),
+            authorization_type=apigw.AuthorizationType.COGNITO,
+            authorizer=authorizer
+        )
+        
+        # 1. Definicija Lambda funkcije za brisanje umetnika
+        delete_artist_lambda = _lambda.Function(
+            self, "DeleteArtistLambda",
+            function_name="DeleteArtistLambda",
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            handler="delete_artist.handler",
+            code=_lambda.Code.from_asset("backend/lambdas/content"),
+            timeout=Duration.seconds(45), # Još duže vreme zbog višestrukog kaskadnog brisanja
+            environment={
+                "ARTISTS_TABLE": table_artists.table_name,
+                "ALBUMS_TABLE": table_albums.table_name,
+                "SINGLES_TABLE": table_singles.table_name,
+                "AUDIO_BUCKET": audio_bucket.bucket_name,
+                "IMAGES_BUCKET": images_bucket.bucket_name,
+                "GENRE_INDEX_TABLE": table_genre_index.table_name,
+                "ARTIST_INDEX_TABLE": table_artist_index.table_name,
+            }
+        )
+
+        # 2. Dozvole
+        
+        # A. Dozvole za ARTISTS tabelu (Read/Write)
+        table_artists.grant_read_data(delete_artist_lambda)
+        table_artists.grant_write_data(delete_artist_lambda)
+        
+        # B. Dozvole za ALBUMS tabelu (Read/Query i Write/Delete)
+        table_albums.grant_read_data(delete_artist_lambda)
+        table_albums.grant_write_data(delete_artist_lambda)
+        # Query na Albums GSI (za albume tog umetnika)
+        delete_artist_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["dynamodb:Query"],
+                resources=[f"{table_albums.table_arn}/index/*"] 
+            )
+        )
+        
+        # C. Dozvole za SINGLES tabelu (Read/Query i Write/Delete)
+        table_singles.grant_read_data(delete_artist_lambda) 
+        table_singles.grant_write_data(delete_artist_lambda)
+        # Query na Singles GSI (za singlove tog umetnika)
+        delete_artist_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["dynamodb:Query"],
+                resources=[f"{table_singles.table_arn}/index/*"] 
+            )
+        )
+
+        # D. Dozvole za S3, Indekse
+        images_bucket.grant_delete(delete_artist_lambda)
+        audio_bucket.grant_delete(delete_artist_lambda)
+        table_genre_index.grant_write_data(delete_artist_lambda)
+        table_artist_index.grant_write_data(delete_artist_lambda)
+        
+        artist_id_resource = artists.add_resource("{artistId}",
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_origins=apigw.Cors.ALL_ORIGINS,
+                allow_methods=["GET", "DELETE", "OPTIONS"],
+                allow_headers=["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key"]
+            ))
+
+        # Povezivanje DELETE metode na /artists/{artistId} sa DeleteArtistLambda
+        artist_id_resource.add_method(
+            "DELETE",
+            apigw.LambdaIntegration(delete_artist_lambda),
+            authorization_type=apigw.AuthorizationType.COGNITO,
+            authorizer=authorizer
+        )
+        
+        
         create_album_lambda = _lambda.Function(
             self, "CreateAlbumLambda",
             runtime=_lambda.Runtime.PYTHON_3_9,
