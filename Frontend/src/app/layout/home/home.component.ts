@@ -20,9 +20,17 @@ export class HomeComponent {
     this.contentService.getRecommendedFeed().subscribe({
       next: (feed) => {
         console.log(feed)
-        this.recommendedSongs = feed.recommendedSongs;
-        this.recommendedArtists = feed.recommendedArtists;
-        this.recommendedAlbums = feed.recommendedAlbums;
+        this.recommendedSongs = feed.recommendedSongs
+          .sort((a: any, b: any) => b.score - a.score)  // Sort by "score" in descending order
+          .map((item: any) => item.content);
+
+        this.recommendedArtists = feed.recommendedArtists
+          .sort((a: any, b: any) => b.score - a.score)  // Sort by "score" in descending order
+          .map((item: any) => item.content);
+
+        this.recommendedAlbums = feed.recommendedAlbums
+          .sort((a: any, b: any) => b.score - a.score)  // Sort by "score" in descending order
+          .map((item: any) => item.content);
       }
     })
   }
