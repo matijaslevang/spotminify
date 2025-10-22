@@ -83,13 +83,29 @@ class BackendStack(Stack):
             removal_policy=RemovalPolicy.DESTROY
         )
 
+        # table_ratings = dynamodb.Table(
+        #     self, "Ratings",
+        #     partition_key=dynamodb.Attribute(name="username", type=dynamodb.AttributeType.STRING),
+        #     sort_key=dynamodb.Attribute(name="contentId", type=dynamodb.AttributeType.STRING),
+        #     removal_policy=RemovalPolicy.DESTROY
+        # )
+        # 1. Tabela za ocene
         table_ratings = dynamodb.Table(
             self, "Ratings",
-            partition_key=dynamodb.Attribute(name="username", type=dynamodb.AttributeType.STRING),
-            sort_key=dynamodb.Attribute(name="contentId", type=dynamodb.AttributeType.STRING),
-            removal_policy=RemovalPolicy.DESTROY
+            partition_key=dynamodb.Attribute(name="contentId", type=dynamodb.AttributeType.STRING),
+            sort_key=dynamodb.Attribute(name="username", type=dynamodb.AttributeType.STRING),
+            removal_policy=RemovalPolicy.DESTROY # Koristite DESTROY samo u razvoju!
         )
 
+        # 2. GSI: Index za pretragu SVIH ocena po korisniku
+        table_ratings.add_global_secondary_index(
+            index_name="UserRatingsIndex",
+            partition_key=dynamodb.Attribute(name="username", type=dynamodb.AttributeType.STRING),
+            sort_key=dynamodb.Attribute(name="contentId", type=dynamodb.AttributeType.STRING),
+            projection_type=dynamodb.ProjectionType.ALL
+        )
+        self.table_ratings_name = table_ratings.table_name
+        
         table_score_cache = dynamodb.Table(
             self, "ScoreCache",
             partition_key=dynamodb.Attribute(name="username", type=dynamodb.AttributeType.STRING),
@@ -425,7 +441,8 @@ class BackendStack(Stack):
             "GET",
             apigw.LambdaIntegration(get_genres_lambda)
         )
-
+        
+        
         artists = api.root.add_resource("artists",
             default_cors_preflight_options=apigw.CorsOptions(
                 allow_origins=apigw.Cors.ALL_ORIGINS,
@@ -510,11 +527,13 @@ class BackendStack(Stack):
             handler="get_single.handler",
             code=_lambda.Code.from_asset("backend/lambdas/content"),
             environment={
-                "SINGLE_TABLE": table_singles.table_name
+                "SINGLE_TABLE": table_singles.table_name,
+                "RATINGS_TABLE": table_ratings.table_name
             }
         )
         table_singles.grant_read_data(get_single_lambda)
-
+        table_ratings.grant_read_data(get_single_lambda)
+        
         get_single = api.root.add_resource("get-single",
             default_cors_preflight_options=apigw.CorsOptions(
                 allow_origins=apigw.Cors.ALL_ORIGINS,
@@ -655,6 +674,57 @@ class BackendStack(Stack):
         #     max_age=3000,
         # )
         # NEW create_album_lambda
+        
+        # ------------- RATING -----------------
+        rate_content_lambda = _lambda.Function(
+            self, "RateContentLambda",
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            handler="rate_content.handler",
+            code=_lambda.Code.from_asset("backend/lambdas/content"), # Pretpostavljamo da je putanja backend/ratings
+            timeout=Duration.seconds(10),
+            environment={
+                "RATINGS_TABLE": table_ratings.table_name,
+                "SINGLES_TABLE": table_singles.table_name, # Potrebno za dohvatanje žanrova
+                "ALBUMS_TABLE": table_albums.table_name,   # Potrebno za dohvatanje žanrova
+            }
+        )
+
+        # 4. Dozvole
+        table_ratings.grant_read_write_data(rate_content_lambda)
+        table_singles.grant_read_data(rate_content_lambda) # Dozvola za čitanje zbog žanrova
+        table_albums.grant_read_data(rate_content_lambda) # Dozvola za čitanje zbog žanrova
+
+
+        # 5. API Gateway Integracija
+        ratings_resource = api.root.add_resource(
+            "ratings",
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_origins=apigw.Cors.ALL_ORIGINS,
+                allow_methods=["POST", "OPTIONS"],
+                allow_headers=apigw.Cors.DEFAULT_HEADERS
+            )
+        )
+
+        ratings_resource.add_method(
+            "POST",
+            apigw.LambdaIntegration(rate_content_lambda),
+            authorization_type=apigw.AuthorizationType.COGNITO,
+            authorizer=authorizer,
+        )
+        # ------------- RATING END ----------------- 
+        
+        table_singles.add_global_secondary_index(
+            index_name="SingleIdIndexV2", 
+            partition_key=dynamodb.Attribute(name="singleId", type=dynamodb.AttributeType.STRING), 
+            projection_type=dynamodb.ProjectionType.ALL 
+        )       
+        
+        table_albums.add_global_secondary_index(
+            index_name="AlbumIdIndexV2", 
+            partition_key=dynamodb.Attribute(name="albumId", type=dynamodb.AttributeType.STRING),
+            projection_type=dynamodb.ProjectionType.ALL  
+        )
+        # ------------- GSI ZA ALBUM/SINGLE ----------------- 
         
         delete_single_lambda = _lambda.Function(
             self, "DeleteSingleLambda",

@@ -1,6 +1,15 @@
 <div class="container">
     <img class="song-image" src={{song.imageKey}} alt={{song.title}} [class.spinning]="isPlaying">
     <p class="song-name">{{song.title}} by {{song.artistIds}} - {{song.genres}}</p>
+    <div class="average-rating-display">
+        <ng-container *ngIf="song.averageRating !== null && song.ratingCount > 0; else noRating">
+            <span class="rating-value">⭐️ {{ song.averageRating | number:'1.2-2' }}/5</span>
+            <span class="rating-count"> ({{ song.ratingCount }} ratings)</span>
+        </ng-container>
+        <ng-template #noRating>
+            <span class="no-rating-message">Be the first to rate this song!</span>
+        </ng-template>
+    </div>
     <audio class="song-player" controls (play)="onPlay()" (pause)="onPause()" [src]="song.audioKey">
         Your browser does not support the audio element.
     </audio>
@@ -9,12 +18,14 @@
         <a *ngIf="audioSrc !== song.audioKey" (click)="onRemove()">Remove download</a>
         <audio [src]="audioSrc" controls></audio>
     <br>
+    
     <app-rate-content
         [contentType]="'SONG'"
         [contentId]="song.singleId"
         buttonLabel="Rate song"
         (rated)="onSongRated($event)">
     </app-rate-content>
+    
     <br>
     <!-- postojeći sadržaj ... -->
     <div class="actions-admin" *ngIf="isAdmin">

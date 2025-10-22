@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { AuthService } from '../../../auth/auth.service';
 import { UpdateAlbumComponent } from '../update-album/update-album.component';
+import { MatSnackBar } from '@angular/material/snack-bar';
 @Component({
   selector: 'app-album-view',
   templateUrl: './album-view.component.html',
@@ -25,7 +26,7 @@ export class AlbumViewComponent {
   isPlaying = false;
   isAdmin = false;
 
-  constructor(private contentService: ContentService, private router: Router,private auth: AuthService, private dialog: MatDialog) {
+  constructor(private contentService: ContentService, private snackBar: MatSnackBar,private router: Router,private auth: AuthService, private dialog: MatDialog) {
     const navigation = this.router.getCurrentNavigation();
     this.albumId = navigation?.extras?.state?.['albumId'];
     console.log(this.albumId)
@@ -74,6 +75,7 @@ export class AlbumViewComponent {
 
   onAlbumRated(value: number) {
     console.log(`Album rated ${value}/5`);
+    this.snackBar.open(`Thanks for rating ${this.album.title}: ${value}/5`, 'Close', { duration: 2500 });
     // po želji snackbar/toast
   }
 }
