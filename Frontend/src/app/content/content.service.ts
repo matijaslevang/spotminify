@@ -90,12 +90,12 @@ export class ContentService {
     return this.httpClient.get<any[]>(`${environment.apiUrl}/subscriptions`);
   }
 
-  subscribe(payload: { targetId: string, subscriptionType: string, artistName?: string, imageUrl?: string}): Observable<any> {
+  subscribe(payload: { targetId: string, subscriptionType: string, artistName?: string, imageUrl?: string, genres: string[]}): Observable<any> {
     return this.httpClient.post(`${environment.apiUrl}/subscriptions`, payload);
   }
 
-  unsubscribe(targetId: string): Observable<any> {
-    return this.httpClient.delete(`${environment.apiUrl}/subscriptions/${targetId}`);
+  unsubscribe(targetId: string, type: string, genres: string[]): Observable<any> {
+    return this.httpClient.delete(`${environment.apiUrl}/subscriptions/${targetId}`, {body: {subType: type, genres: genres}});
   }
 
 }

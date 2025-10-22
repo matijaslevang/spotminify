@@ -5,11 +5,14 @@ from datetime import datetime
 
 # Inicijalizacija AWS klijenata
 dynamodb = boto3.resource('dynamodb')
+sqs_client = boto3.client('sqs')
 
 # Dobijanje imena resursa iz environment varijabli
 RATINGS_TABLE_NAME = os.environ['RATINGS_TABLE']
 SINGLES_TABLE_NAME = os.environ['SINGLES_TABLE']
 ALBUMS_TABLE_NAME = os.environ['ALBUMS_TABLE']
+queue_url = os.environ["QUEUE_URL"]
+
 
 ratings_table = dynamodb.Table(RATINGS_TABLE_NAME)
 singles_table = dynamodb.Table(SINGLES_TABLE_NAME)
@@ -75,6 +78,18 @@ def get_content_details(content_id, content_type):
     # Za ARTIST se žanrovi obično ne upisuju u ocenu, ali možete ih uzeti sa artist_table
     return []
 
+def rating_to_score(rating_value):
+    if rating_value == 1:
+        return -5
+    if rating_value == 2:
+        return -2
+    if rating_value == 3:
+        return 0
+    if rating_value == 4:
+        return 2
+    if rating_value == 5:
+        return 5
+    
 
 def handler(event, context):
     try:
@@ -120,6 +135,18 @@ def handler(event, context):
         # ključ (contentId+username) će zameniti staru ocenu (overwrite).
         ratings_table.put_item(Item=item_to_put)
         
+        print("send message")
+        payload = {
+            "username": username,
+            "type": "rating",
+            "incomingScore": 1,
+            "genres": json.dumps(list(genres))
+        }
+        print(payload)
+        response = sqs_client.send_message(
+            QueueUrl=queue_url,
+            MessageBody=json.dumps(payload)
+        )
         # Opciono: Mogli biste ovde poslati poruku na SQS za asinhrono ažuriranje prosečne ocene
 
         # 5. USPEŠAN ODGOVOR

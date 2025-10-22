@@ -20,6 +20,9 @@ def handler(event, context):
         )
         
         subscriptions = response.get('Items', [])
+
+        for subscription in subscriptions:
+            subscription['genres'] = list(subscription['genres'])
         
         return {
             "statusCode": 200,

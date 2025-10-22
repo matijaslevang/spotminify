@@ -15,6 +15,11 @@
     text-align: center;
 }
 
+.artist-column .scrollable {
+    height: 90vh;
+    overflow-y: auto;
+}
+
 .scrollable {
     overflow-y: auto;
 }

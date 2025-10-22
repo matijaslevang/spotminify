@@ -23,13 +23,20 @@ def handler(event, context):
                 params = {
                     "UserPoolId": user_pool_id,
                     "Limit": 60,
-                    "AttributesToGet": ["username"]
                 }
                 if pagination_token:
                     params["PaginationToken"] = pagination_token
 
-                response = client.list_users(**params)
+                try:
+                    response = client.list_users(**params)
+                except client.exceptions.InvalidParameterException as e:
+                    print(f"Invalid Parameter: {e}")
+                    break
+                except Exception as e:
+                    print(f"Error during list_users: {e}")
+                    break
 
+                print(response)
                 for user in response["Users"]:
                     usernames.append(user["Username"])
 
@@ -38,6 +45,8 @@ def handler(event, context):
                     break
 
             # LOOP:
+            print(usernames)
+            
             for username in usernames:
                 # 2. get user's scores
                 song_score = 0
@@ -45,7 +54,7 @@ def handler(event, context):
                     response = table_score_cache.get_item(
                         Key={"username": username}
                     )
-                    score_entry = response.get("Item")
+                    score_entry = response.get("Item", {})
 
                     scores: dict = score_entry.get("scores", {})
 
@@ -53,9 +62,9 @@ def handler(event, context):
                     print(f"Failed to fetch score for {username}: {e}")
 
                 # 3. calculate new content's score
-                genres = message["genres"]
+                genres = json.loads(message["genres"])
                 for genre in genres:
-                    song_score += scores[genre]
+                    song_score += scores.get(genre, 0)
 
                 # a small boost because it is new content
                 song_score *= 10
@@ -66,29 +75,29 @@ def handler(event, context):
                 user_feed = response.get("Items", [])
                 filtered_feed = [item for item in user_feed if item["contentType"] == message["contentType"]]
                 
+                if filtered_feed:
                 # 5. add to feed if it has enough score
-                lowest = min(filtered_feed, key=lambda x: x["score"])
-
-                if lowest["score"] < song_score:
-                    
-                    # delete lowest score song from user's feed
-                    table_feed_cache.delete_item(
-                        Key={
-                            "username": username,
-                            "contentId": lowest["contentId"]
-                        }
-                    )
+                    lowest = min(filtered_feed, key=lambda x: x["score"])
+                
+                    if lowest["score"] < song_score:
+                        
+                        # delete lowest score song from user's feed
+                        table_feed_cache.delete_item(
+                            Key={
+                                "username": username,
+                                "contentId": lowest["contentId"]
+                            }
+                        )
                     
                     # add current song to user's feed
-                    table_feed_cache.put_item(
-                        Item={
-                            "username": username,
-                            "contentId": message["contentId"],
-                            "score": song_score,
-                            "contentType": message["contentType"],
-                            "imageUrl": message["imageUrl"],
-                            "contentName": message["contentName"]
-                        }
-                    )
+                table_feed_cache.put_item(
+                    Item={
+                        "username": username,
+                        "contentId": message["contentId"],
+                        "score": song_score,
+                        "contentType": message["contentType"],
+                        "content": message["content"]
+                    }
+                )
         except Exception as e:
             print(f"Error: {e}")

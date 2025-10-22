@@ -4,6 +4,7 @@ s3  = boto3.client("s3")
 ddb = boto3.client("dynamodb")
 lambda_client = boto3.client("lambda")
 sns = boto3.client("sns")
+sqs_client = boto3.client('sqs')
 
 ALBUMS_TABLE  = os.environ["ALBUMS_TABLE"]
 SINGLES_TABLE = os.environ["SINGLES_TABLE"]
@@ -11,6 +12,7 @@ AUDIO_BUCKET  = os.environ["AUDIO_BUCKET"]
 IMAGES_BUCKET = os.environ["IMAGES_BUCKET"]
 FILTER_ADD_LAMBDA = os.environ["FILTER_ADD_LAMBDA"]
 NEW_CONTENT_TOPIC_ARN = os.environ["NEW_CONTENT_TOPIC_ARN"]
+queue_url = os.environ["QUEUE_URL"]
 
 def cors():
     return {
@@ -76,6 +78,30 @@ def handler(event, _):
             InvocationType="Event",
             Payload=json.dumps(payload)
         )
+
+        content = {
+            "artistId":  pk_artist_id,      
+            "albumId":   albumId,           
+            "title":     title,
+            "artistIds":  artistIds if artistIds else [],
+            "genres":     genres    if genres   else [],
+            "createdAt": now,
+        }
+        if coverKey:
+            content["coverKey"] = f"https://{IMAGES_BUCKET}.s3.amazonaws.com/{coverKey}"
+
+        payload_feed = {
+            "content": content,
+            "contentId": albumId,
+            "contentType": "album",
+            "genres": json.dumps(list(genres))
+        }
+        print("send message")
+        sqs_client.send_message(
+            QueueUrl=queue_url,
+            MessageBody=json.dumps(payload_feed)
+        )
+
         # kreiraj single stavke
         created = []
         for t in tracks:
@@ -121,6 +147,30 @@ def handler(event, _):
                 FunctionName=FILTER_ADD_LAMBDA,
                 InvocationType="Event",
                 Payload=json.dumps(payload)
+            )
+
+            content_single = {
+                "artistId":  single_pk_artist_id,
+                "singleId":  singleId,           
+                "title":     stitle,
+                "artistIds": sarts if sarts  else [],
+                "genres":    sgenres if sgenres else [],
+                "audioKey":  f"https://{AUDIO_BUCKET}.s3.amazonaws.com/{akey}",
+                "albumId":   albumId,
+                "createdAt": now,
+            }
+            if trno is not None: content_single["trackNo"] = int(trno)
+            if ikey: content_single["imageKey"] = f"https://{IMAGES_BUCKET}.s3.amazonaws.com/{ikey}"
+            payload_feed_two = {
+                "content": content_single,
+                "contentId": singleId,
+                "contentType": "single",
+                "genres": json.dumps(list(sgenres))
+            }
+            print("send message")
+            sqs_client.send_message(
+                QueueUrl=queue_url,
+                MessageBody=json.dumps(payload_feed_two)
             )
 
             try:
