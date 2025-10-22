@@ -479,7 +479,8 @@ class BackendStack(Stack):
             code=_lambda.Code.from_asset("backend/lambdas/content"),
             environment={
                 "ARTIST_TABLE": table_artists.table_name,
-                "RATINGS_TABLE": table_ratings.table_name
+                "RATINGS_TABLE": table_ratings.table_name,
+                "QUEUE_URL": update_feed_score_specific_user_queue.queue_url
             }
         )
         table_artists.grant_read_data(get_artist_lambda)
@@ -573,7 +574,8 @@ class BackendStack(Stack):
             code=_lambda.Code.from_asset("backend/lambdas/content"),
             environment={
                 "ALBUM_TABLE": table_albums.table_name,
-                "RATINGS_TABLE": table_ratings.table_name
+                "RATINGS_TABLE": table_ratings.table_name,
+                "QUEUE_URL": update_feed_score_specific_user_queue.queue_url
             }
         )
         table_albums.grant_read_data(get_album_lambda)
@@ -706,6 +708,7 @@ class BackendStack(Stack):
                 "RATINGS_TABLE": table_ratings.table_name,
                 "SINGLES_TABLE": table_singles.table_name, # Potrebno za dohvatanje žanrova
                 "ALBUMS_TABLE": table_albums.table_name,   # Potrebno za dohvatanje žanrova
+                "QUEUE_URL": update_feed_score_specific_user_queue.queue_url,
             }
         )
 
@@ -1130,7 +1133,8 @@ class BackendStack(Stack):
             handler="subscribe.handler",
             code=_lambda.Code.from_asset("backend/lambdas/subscriptions"),
             environment={
-                "SUBSCRIPTIONS_TABLE_NAME": table_subscriptions.table_name
+                "SUBSCRIPTIONS_TABLE_NAME": table_subscriptions.table_name,
+                "QUEUE_URL": update_feed_score_specific_user_queue.queue_url
             }
         )
         table_subscriptions.grant_write_data(subscribe_lambda)
@@ -1141,7 +1145,8 @@ class BackendStack(Stack):
             handler="unsubscribe.handler",
             code=_lambda.Code.from_asset("backend/lambdas/subscriptions"),
             environment={
-                "SUBSCRIPTIONS_TABLE_NAME": table_subscriptions.table_name
+                "SUBSCRIPTIONS_TABLE_NAME": table_subscriptions.table_name,
+                "QUEUE_URL": update_feed_score_specific_user_queue.queue_url,
             }
         )
         table_subscriptions.grant_write_data(unsubscribe_lambda)
@@ -1197,6 +1202,11 @@ class BackendStack(Stack):
 
         update_feed_score_specific_user_queue.grant_consume_messages(update_feed_score_specific_user_lambda)
         update_feed_score_specific_user_queue.grant_send_messages(get_single_lambda)
+        update_feed_score_specific_user_queue.grant_send_messages(get_artist_lambda)
+        update_feed_score_specific_user_queue.grant_send_messages(get_album_lambda)
+        update_feed_score_specific_user_queue.grant_send_messages(rate_content_lambda)
+        update_feed_score_specific_user_queue.grant_send_messages(subscribe_lambda)
+        update_feed_score_specific_user_queue.grant_send_messages(unsubscribe_lambda)
 
         update_feed_score_specific_user_lambda.add_event_source(
             lambda_event_sources.SqsEventSource(update_feed_score_specific_user_queue)

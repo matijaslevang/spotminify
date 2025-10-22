@@ -4,10 +4,12 @@ import boto3
 from boto3.dynamodb.conditions import Key
 from decimal import Decimal
 
+sqs_client = boto3.client('sqs')
 dynamodb = boto3.resource("dynamodb")
 
 ARTIST_TABLE_NAME = os.environ["ARTIST_TABLE"]
 RATINGS_TABLE_NAME = os.environ.get("RATINGS_TABLE") 
+queue_url = os.environ["QUEUE_URL"]
 
 artists_table = dynamodb.Table(ARTIST_TABLE_NAME)
 ratings_table = dynamodb.Table(RATINGS_TABLE_NAME) if RATINGS_TABLE_NAME else None
@@ -69,6 +71,20 @@ def handler(event, context):
         if "Item" in response:
             artist = response['Item']
             
+            username = event['requestContext']['authorizer']['claims']['cognito:username']
+            print("send message")
+            payload = {
+                "username": username,
+                "type": "activity",
+                "incomingScore": 1,
+                "genres": json.dumps(list(artist['genres']))
+            }
+            print(payload)
+            response = sqs_client.send_message(
+                QueueUrl=queue_url,
+                MessageBody=json.dumps(payload)
+            )
+
             if 'genres' in artist and isinstance(artist['genres'], set):
                 artist['genres'] = list(artist['genres'])
             
@@ -76,7 +92,7 @@ def handler(event, context):
             
             artist['averageRating'] = average_rating 
             artist['ratingCount'] = rating_count
-            
+           
             return {
                 "statusCode": 200,
                 "body": json.dumps(artist, default=custom_json_serializer),

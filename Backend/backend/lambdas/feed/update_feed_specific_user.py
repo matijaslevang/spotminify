@@ -101,6 +101,7 @@ def handler(event, context):
             print(combined_list)
             with table_feed_cache.batch_writer() as batch:
                 for element in combined_list:
+                    print(element)
                     pk = username
                     if 'biography' in element[0]:
                         sk = element[0]['artistId']
@@ -108,7 +109,7 @@ def handler(event, context):
                     elif 'coverKey' in element[0]:
                         sk = element[0]['albumId']
                         content_type = "album"
-                    elif 'explicit' in element[0]:
+                    elif 'singleId' in element[0]:
                         sk = element[0]['singleId']
                         content_type = "single"
                     else:
