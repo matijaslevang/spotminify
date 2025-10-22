@@ -12,7 +12,7 @@
     <mat-form-field appearance="outline" class="full">
       <mat-label>Genres</mat-label>
       <mat-select formControlName="genres" multiple>
-        <mat-option *ngFor="let g of data.genreOptions" [value]="g">{{ g }}</mat-option>
+        <mat-option *ngFor="let g of availableGenres" [value]="g.genreId">{{ g.genreName }}</mat-option>
       </mat-select>
       <mat-error *ngIf="form.get('genres')?.invalid && form.get('genres')?.touched">Select at least one</mat-error>
     </mat-form-field>
@@ -20,10 +20,19 @@
     <mat-form-field appearance="outline" class="full">
       <mat-label>Artists</mat-label>
       <mat-select formControlName="artistIds" multiple>
-        <mat-option *ngFor="let a of data.artistOptions" [value]="a.id">{{ a.name }}</mat-option>
+        <mat-option *ngFor="let a of availableArtists" [value]="a.artistId">{{ a.name }}</mat-option>
       </mat-select>
       <mat-error *ngIf="form.get('artistIds')?.invalid && form.get('artistIds')?.touched">Required</mat-error>
     </mat-form-field>
+
+     <!-- <div class="dropzone audio-dropzone" (click)="audioFileInput.click()">
+     <input #audioFileInput type="file" accept="audio/*" (change)="onAudioFile($event)" hidden>
+       <div class="dz-inner">
+         <mat-icon>audiotrack</mat-icon>
+         <p>Click to replace song file (optional)</p>
+       </div>
+    </div>
+    <p *ngIf="audioFile" class="file-name">Selected audio file: {{ audioFile.name }}</p> -->
 
     <div class="dropzone" (click)="coverInput.click()">
       <input #coverInput type="file" accept="image/*" (change)="onCover($event)" hidden>

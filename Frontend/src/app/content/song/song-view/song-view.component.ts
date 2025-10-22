@@ -94,8 +94,8 @@ export class SongViewComponent {
     width: '680px',
     data: {
       single: this.song,                 // očekuje { songId, name, artists[], genres[], imageUrl?, explicit? ... }
-      //artistOptions: this.artistOptions, // ili dohvati sa API-ja
-      //genreOptions: this.genreOptions
+      artistOptions: this.song.artistIds, // ili dohvati sa API-ja
+      availableGenres: this.song.genres
     }
   });
   //ref.afterClosed().subscribe(ok => ok && this.reloadSong());

@@ -35,6 +35,7 @@ def handler(event, _):
 
         title     = (data.get("title") or data.get("ContentName") or "").strip()
         artistIds = data.get("artistIds") or data.get("Artists") or []
+        artistNames = data.get("artistNames") or []
         genres    = data.get("genres")    or data.get("Genres")  or []
         audioKey  = data.get("audioKey")
         imageKey  = data.get("imageKey")
@@ -61,6 +62,7 @@ def handler(event, _):
             "singleId":  {"S": singleId},          # <--- Sort Key (SK)
             "title":     {"S": title},
             "artistIds": {"SS": artistIds} if artistIds else {"SS":[]},
+            "artistNames": {"SS": artistNames} if artistNames else {"SS":[]}, 
             "genres":    {"SS": genres}    if genres    else {"SS":[]},
             "audioKey":  {"S": f"https://{audio_bucket}.s3.amazonaws.com/{audio_key}"},
             "explicit":  {"BOOL": explicit},
@@ -81,7 +83,8 @@ def handler(event, _):
             "contentName": title,
             "imageUrl": f"https://{img_bucket}.s3.amazonaws.com/{img_key}",
             "contentGenres": genres,
-            "contentArtists": artistIds # TODO check this stuff out
+            "contentArtists": artistIds,
+            "contentArtistNames": artistNames
         }
         lambda_client.invoke(
             FunctionName=FILTER_ADD_LAMBDA,
@@ -93,7 +96,8 @@ def handler(event, _):
             "content": item,
             "contentId": singleId,
             "contentType": "single",
-            "genres": json.dumps(list(genres))
+            "genres": json.dumps(list(genres)),
+            "artistNames": json.dumps(list(artistNames))
         }
         print("send message")
         sqs_client.send_message(
@@ -107,6 +111,7 @@ def handler(event, _):
                 'contentId': singleId,
                 'title': title,
                 'artistIds': artistIds,
+                'artistNames': artistNames,
                 'genres': genres,
             }
             sns.publish(

@@ -40,7 +40,7 @@ export class AdminComponent implements OnInit {
   albumSingleForm!: FormGroup;
 
   // Kolekcija singlova za album
-  albumSingles: Array<{ title: string; genres: string[]; artistIds: string[]; fileIndex: number }> = [];
+  albumSingles: Array<{ title: string; genres: string[]; artistIds: string[]; artistNames: string[]; fileIndex: number }> = [];
 
   constructor(private fb: FormBuilder, private api: UploadService, private contentService: ContentService,private snack: MatSnackBar) {}
 
@@ -51,19 +51,22 @@ export class AdminComponent implements OnInit {
       title: ['', [Validators.required, Validators.maxLength(200)]],
       genres: [[] as string[]],
       artistIds: [[] as string[]],
+      artistNames: [[] as string[]],
       explicit: [false]
     });
 
     this.albumForm = this.fb.group({
       title: ['', [Validators.required, Validators.maxLength(200)]],
       genres: [[] as string[]],
-      artistIds: [[] as string[]]
+      artistIds: [[] as string[]],
+      artistNames: [[] as string[]],
     });
 
     this.albumSingleForm = this.fb.group({
       title: ['', [Validators.required, Validators.maxLength(200)]],
       genres: [[] as string[]],
       artistIds: [[] as string[]],
+      artistNames: [[] as string[]],
       fileIndex: [null, [Validators.required]]
     });
   }
@@ -175,7 +178,15 @@ export class AdminComponent implements OnInit {
     const map = new Map(this.artistOptions.map(a => [a.id, a.name]));
     return ids.map(id => map.get(id) || id).join(', ');
   }
-
+  private mapArtistIdsToNames(artistIds: string[]): string[] {
+    if (!this.availableArtists || !artistIds) return [];
+    
+    const nameMap = new Map(this.availableArtists.map(a => [a.artistId, a.name]));
+    
+    return artistIds
+      .map(id => nameMap.get(id))
+      .filter((name): name is string => !!name); // Filter null/undefined i TypeScript tip
+  }
   // SINGLE SUBMIT
   async submitSingle() {
   if (this.singleForm.invalid || !this.files.length) {
@@ -184,6 +195,10 @@ export class AdminComponent implements OnInit {
   }
   this.isSubmittingSingle = true;
   try {
+    const selectedArtistIds = this.singleForm.value.artistIds;
+    const selectedArtistNames = this.mapArtistIdsToNames(selectedArtistIds);
+    this.singleForm.get('artistNames')?.setValue(selectedArtistNames);
+
     const audioFile = this.files[0];
     const audioContentType = audioFile.type || 'audio/mpeg';
     // 1) presign audio
@@ -213,6 +228,7 @@ export class AdminComponent implements OnInit {
       title: this.singleForm.value.title,
       artistIds: this.singleForm.value.artistIds,
       genres: this.singleForm.value.genres,
+      artistNames: this.singleForm.value.artistNames,
       explicit: !!this.singleForm.value.explicit,
       audioKey: presA!.key,
       ...(imageKey ? { imageKey } : {})
@@ -233,15 +249,33 @@ export class AdminComponent implements OnInit {
   }
 }
 
-  goToSingles() { this.albumStep = 1; }
+   goToSingles() { 
+    // Popunjavanje albumForm sa imenima pre prelaska na sledeći korak
+    // const selectedArtistIds = this.albumForm.value.artistIds;
+    // const selectedArtistNames = this.mapArtistIdsToNames(selectedArtistIds);
+    // this.albumForm.get('artistNames')?.setValue(selectedArtistNames);
+    this.albumStep = 1; 
+}
   backToAlbum() { this.albumStep = 0; }
 
   addAlbumSingle() {
     if (this.albumSingleForm.invalid) return;
-    this.albumSingles.push({ ...this.albumSingleForm.value });
-    this.albumSingleForm.reset({ title: '', genres: [], artistIds: [], fileIndex: null });
-  }
 
+    const selectedArtistIds = this.albumSingleForm.value.artistIds;
+    const selectedArtistNames = this.mapArtistIdsToNames(selectedArtistIds);
+
+    this.albumSingles.push({ 
+          ...this.albumSingleForm.value,
+          artistNames: selectedArtistNames // Dodato artistNames
+      });
+      
+     this.albumSingleForm.reset({ title: '', genres: [], artistIds: [], artistNames: [], fileIndex: null });
+    }
+  // addAlbumSingle() {
+  //   if (this.albumSingleForm.invalid) return;
+  //   this.albumSingles.push({ ...this.albumSingleForm.value });
+  //   this.albumSingleForm.reset({ title: '', genres: [], artistIds: [], fileIndex: null });
+  // }
   removeAlbumSingle(i: number) { this.albumSingles.splice(i, 1); }
 
   // FINAL SAVE album
@@ -270,6 +304,10 @@ export class AdminComponent implements OnInit {
     }).toPromise();
     await this.api.putToS3(presCover!.url, this.cover, this.cover.type);
     const coverKey = presCover!.key;
+    
+    const selectedArtistIds = this.albumForm.value.artistIds;
+    const selectedArtistNames = this.mapArtistIdsToNames(selectedArtistIds);
+    this.albumForm.get('artistNames')?.setValue(selectedArtistNames);
 
     // 2) svaka traka presign+PUT
     const tracks = [];
@@ -287,6 +325,7 @@ export class AdminComponent implements OnInit {
       tracks.push({
         title: s.title,
         artistIds: s.artistIds,
+        artistNames: s.artistNames,
         genres: s.genres,
         trackNo: i + 1,
         audioKey: presA!.key
@@ -297,6 +336,7 @@ export class AdminComponent implements OnInit {
     const payload = {
       title: this.albumForm.value.title,
       artistIds: this.albumForm.value.artistIds,
+      artistNames: this.albumForm.value.artistNames,
       genres: this.albumForm.value.genres,
       coverKey,
       tracks
@@ -318,14 +358,15 @@ export class AdminComponent implements OnInit {
     this.isSubmittingAlbum = false;
   }
 }
-  resetSingle() {
-    this.singleForm.reset({ title: '', genres: [], artistIds: [], explicit: false });
-  }
+ resetSingle() {
+   this.singleForm.reset({ title: '', genres: [], artistIds: [], artistNames: [], explicit: false });
+   }
 
   resetAlbum() {
-    this.albumForm.reset({ title: '', genres: [], artistIds: [] });
+    // this.albumForm.reset({ title: '', genres: [], artistIds: [], artistNames: [] });
+    //this.albumSingleForm.reset({ title: '', genres: [], artistIds: [], artistNames: [], fileIndex: null });
     this.albumSingles = [];
     this.albumStep = 0;
-  }
+ }
 
-}
+} 

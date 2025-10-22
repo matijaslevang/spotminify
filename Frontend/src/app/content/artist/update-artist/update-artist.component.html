@@ -41,9 +41,9 @@
     <mat-form-field appearance="outline" class="full-width">
       <mat-label>Genres</mat-label>
       <mat-select formControlName="genres" multiple>
-        <mat-option *ngFor="let g of data.availableGenres" [value]="g.genreId ?? g.id">
-          {{ g.genreName ?? g.name }}
-        </mat-option>
+        <mat-option *ngFor="let g of availableGenres" [value]="g.genreId">
+           {{ g.genreName }}
+       </mat-option>
       </mat-select>
       <mat-error *ngIf="form.get('genres')?.invalid && form.get('genres')?.touched">
         At least one genre
