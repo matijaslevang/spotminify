@@ -2,8 +2,10 @@ import os
 import json
 import boto3
 
+sqs_client = boto3.client('sqs')
 dynamodb = boto3.resource('dynamodb')
 table_score_cache = dynamodb.Table(os.environ["SCORE_TABLE_NAME"])
+queue_url = os.environ["QUEUE_URL"]
 
 def handler(event, context):
     for record in event['Records']:
@@ -20,7 +22,7 @@ def handler(event, context):
                 response = table_score_cache.get_item(
                     Key={"username": username}
                 )
-                score_entry = response.get("Item")
+                score_entry = response.get("Item", {})
 
                 scores: dict = score_entry.get("scores", {})
 
@@ -31,23 +33,20 @@ def handler(event, context):
             # activity, rating, artist subscription, genre subscription
             update_type = message["type"]
             incoming_score = message["incomingScore"]
-            update_feed = False # TODO: think if we should update feed like this, when should feed EXACTLY be updated?
-
+            
             if update_type == "activity":
                 incoming_score *= 1
             elif update_type == "rating": 
                 incoming_score *= 10
-                update_feed = True
             elif update_type == "artsub":
                 incoming_score *= 1000
-                update_feed = True
             elif update_type == "gensub":
                 incoming_score *= 500
-                update_feed = True
             else:
                 raise Exception("Invalid type")
             
-            genres = message["genres"]
+            genres = json.loads(message["genres"])
+            print(genres)
             for genre in genres:
                 scores[genre] = scores.get(genre, 0) + incoming_score
 
@@ -57,6 +56,16 @@ def handler(event, context):
                     "username": username,
                     "scores": scores
                 }
+            )
+
+            # 4. update feed for specific user
+            print("send message")
+            payload = {
+                "username": username
+            }
+            response = sqs_client.send_message(
+                QueueUrl=queue_url,
+                MessageBody=json.dumps(payload)
             )
 
         except Exception as e:

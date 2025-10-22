@@ -25,6 +25,21 @@ class BackendStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
+        update_feed_added_content_queue = sqs.Queue(
+            self, "UpdateFeedAddedContentQueue",
+            removal_policy=RemovalPolicy.DESTROY
+        )
+
+        update_feed_score_specific_user_queue = sqs.Queue(
+            self, "UpdateFeedScoreSpecificUserQueue",
+            removal_policy=RemovalPolicy.DESTROY
+        )
+
+        update_feed_specific_user_queue = sqs.Queue(
+            self, "UpdateFeedSpecificUserQueue",
+            removal_policy=RemovalPolicy.DESTROY
+        )
+        
         self.user_pool = cognito.UserPool(
             self, "MyNewUserPool",
             self_sign_up_enabled=True,
@@ -530,7 +545,8 @@ class BackendStack(Stack):
             code=_lambda.Code.from_asset("backend/lambdas/content"),
             environment={
                 "SINGLE_TABLE": table_singles.table_name,
-                "RATINGS_TABLE": table_ratings.table_name
+                "RATINGS_TABLE": table_ratings.table_name,
+                "QUEUE_URL": update_feed_score_specific_user_queue.queue_url
             }
         )
         table_singles.grant_read_data(get_single_lambda)
@@ -1022,13 +1038,16 @@ class BackendStack(Stack):
             )
         )
 
+        # ----------------- SQS -----------------
+
         update_feed_score_specific_user_lambda = _lambda.Function(
             self, "UpdateFeedScoreSpecificUserLambda",
             runtime=_lambda.Runtime.PYTHON_3_9,
             handler="update_feed_score_specific_user.handler",
             code=_lambda.Code.from_asset("backend/lambdas/feed"),
             environment={
-                "SCORE_TABLE_NAME" : table_score_cache.table_name
+                "SCORE_TABLE_NAME" : table_score_cache.table_name,
+                "QUEUE_URL": update_feed_specific_user_queue.queue_url
             }
         )
 
@@ -1041,52 +1060,19 @@ class BackendStack(Stack):
             code=_lambda.Code.from_asset("backend/lambdas/feed"),
             environment={
                 "SCORE_TABLE_NAME" : table_score_cache.table_name,
-                "FEED_TABLE_NAME" : table_feed_cache.table_name
+                "FEED_TABLE_NAME" : table_feed_cache.table_name,
+                "ARTIST_TABLE_NAME" : table_artists.table_name,
+                "SINGLE_TABLE_NAME" : table_singles.table_name,
+                "ALBUM_TABLE_NAME" : table_albums.table_name,
             }
         )
 
         table_score_cache.grant_read_data(update_feed_specific_user_lambda)
         table_feed_cache.grant_read_write_data(update_feed_specific_user_lambda)
+        table_artists.grant_read_data(update_feed_specific_user_lambda)
+        table_singles.grant_read_data(update_feed_specific_user_lambda)
+        table_albums.grant_read_data(update_feed_specific_user_lambda)
 
-        
-        
-        # ----------------- SQS -----------------
-
-        update_feed_added_content_queue = sqs.Queue(
-            self, "UpdateFeedAddedContentQueue",
-            queue_name="update-feed-added-content-queue",
-            removal_policy=RemovalPolicy.DESTROY
-        )
-
-        update_feed_score_specific_user_queue = sqs.Queue(
-            self, "UpdateFeedScoreSpecificUserQueue",
-            queue_name="update-feed-score-specific-user-queue",
-            removal_policy=RemovalPolicy.DESTROY
-        )
-
-        update_feed_specific_user_queue = sqs.Queue(
-            self, "UpdateFeedSpecificUserQueue",
-            queue_name="update-feed-specific-user-queue",
-            removal_policy=RemovalPolicy.DESTROY
-        )
-        
-        update_feed_added_content_queue.grant_consume_messages(update_feed_added_content_lambda)
-
-        update_feed_added_content_lambda.add_event_source(
-            lambda_event_sources.SqsEventSource(update_feed_added_content_queue)
-        )
-
-        update_feed_score_specific_user_queue.grant_consume_messages(update_feed_score_specific_user_lambda)
-
-        update_feed_score_specific_user_lambda.add_event_source(
-            lambda_event_sources.SqsEventSource(update_feed_score_specific_user_queue)
-        )
-
-        update_feed_specific_user_queue.grant_consume_messages(update_feed_specific_user_lambda)
-
-        update_feed_specific_user_lambda.add_event_source(
-            lambda_event_sources.SqsEventSource(update_feed_specific_user_queue)
-        )
 
         # ----------------- SNS & Notifications -----------------
 
@@ -1200,6 +1186,28 @@ class BackendStack(Stack):
             apigw.LambdaIntegration(unsubscribe_lambda),
             authorization_type=apigw.AuthorizationType.COGNITO,
             authorizer=authorizer
+        )
+
+        update_feed_added_content_queue.grant_consume_messages(update_feed_added_content_lambda)
+
+        update_feed_added_content_lambda.add_event_source(
+            lambda_event_sources.SqsEventSource(update_feed_added_content_queue)
+        )
+        
+
+        update_feed_score_specific_user_queue.grant_consume_messages(update_feed_score_specific_user_lambda)
+        update_feed_score_specific_user_queue.grant_send_messages(get_single_lambda)
+
+        update_feed_score_specific_user_lambda.add_event_source(
+            lambda_event_sources.SqsEventSource(update_feed_score_specific_user_queue)
+        )
+        
+
+        update_feed_specific_user_queue.grant_consume_messages(update_feed_specific_user_lambda)
+        update_feed_specific_user_queue.grant_send_messages(update_feed_score_specific_user_lambda)
+
+        update_feed_specific_user_lambda.add_event_source(
+            lambda_event_sources.SqsEventSource(update_feed_specific_user_queue)
         )
 
 
