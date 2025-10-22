@@ -1,7 +1,6 @@
 import { Component, EventEmitter, Input, Output, TemplateRef, ViewChild } from '@angular/core';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { environment } from '../../../enviroment';
 import { HttpClient } from '@angular/common/http';
 
 @Component({
@@ -26,8 +25,7 @@ export class RateContentComponent {
   submit(d: any) {
     if (!this.rating) return;
     this.submitting = true;
-    // TODO: prilagodi endpoint tvom beku
-    const url = `/api/ratings`;
+    const url = `${environment.apiUrl}/ratings`;
     const body = { targetId: this.contentId, targetType: this.contentType, value: this.rating };
 
     this.http.post(url, body).subscribe({

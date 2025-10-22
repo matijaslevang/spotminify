@@ -9,12 +9,14 @@
         <a *ngIf="audioSrc !== song.audioKey" (click)="onRemove()">Remove download</a>
         <audio [src]="audioSrc" controls></audio>
     <br>
-    <app-rate-content
-        [contentType]="'SONG'"
-        [contentId]="song.singleId"
-        buttonLabel="Rate song"
-        (rated)="onSongRated($event)">
-    </app-rate-content>
+    <ng-container *ngIf="song && song.singleId">
+        <app-rate-content
+            [contentType]="'SONG'"
+            [contentId]="song.singleId"
+            buttonLabel="Rate song"
+            (rated)="onSongRated($event)">
+        </app-rate-content>
+    </ng-container>
     <br>
     <!-- postojeći sadržaj ... -->
     <div class="actions-admin" *ngIf="isAdmin">
