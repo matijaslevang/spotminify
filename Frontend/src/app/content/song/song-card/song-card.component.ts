@@ -17,7 +17,8 @@ export class SongCardComponent implements AfterViewInit {
     genres: [],
     imageKey: '',
     audioKey: '',
-    rating: 0
+    averageRating: 0,
+    ratingCount:0
   };
   @Input() filterDetails: FilterDetails
 
@@ -55,7 +56,7 @@ export class SongCardComponent implements AfterViewInit {
     this.router.navigate(["/song"], {state: { songId: this.song.singleId}});
   }
     confirmDelete() {
-     // Provera da li postoji ID i da li je korisnik Admin (iako je dugme već skriveno, dobra je praksa)
+   // Provera da li postoji ID i da li je korisnik Admin (iako je dugme već skriveno, dobra je praksa)
      if (this.isAdmin && this.song.singleId && confirm(`Delete ${this.song.title}?`)) {
          this.contentService.deleteSingle(this.song.singleId).subscribe({
          next: (response) => {

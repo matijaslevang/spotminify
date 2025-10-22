@@ -37,7 +37,6 @@ import os
 import json
 import boto3
 from boto3.dynamodb.conditions import Key
-# Uvozimo Decimal za serijalizaciju
 from decimal import Decimal 
 
 dynamodb = boto3.resource("dynamodb")
@@ -77,7 +76,7 @@ def handler(event, context):
         album_id = event['queryStringParameters']['albumId']
         
         response = table.query(
-            IndexName='AlbumIdIndex', 
+            IndexName='AlbumIdIndexV2', 
             KeyConditionExpression=Key('albumId').eq(album_id)
         )
         print(response)

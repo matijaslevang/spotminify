@@ -45,7 +45,7 @@ def get_content_details(content_id, content_type):
         try:
             # Koristimo SingleIdIndex na SinglesTable
             response = singles_table.query(
-                IndexName='SingleIdIndex', # MORATE DODATI OVAJ GSI U CDK!
+                IndexName='SingleIdIndexV2', # MORATE DODATI OVAJ GSI U CDK!
                 KeyConditionExpression=boto3.dynamodb.conditions.Key('singleId').eq(content_id)
             )
             item = response.get('Items', [None])[0]
@@ -62,7 +62,7 @@ def get_content_details(content_id, content_type):
         try:
             # Koristimo AlbumIdIndex na AlbumsTable
             response = albums_table.query(
-                IndexName='AlbumIdIndex', # MORATE DODATI OVAJ GSI U CDK!
+                IndexName='AlbumIdIndexV2', # MORATE DODATI OVAJ GSI U CDK!
                 KeyConditionExpression=boto3.dynamodb.conditions.Key('albumId').eq(content_id)
             )
             item = response.get('Items', [None])[0]

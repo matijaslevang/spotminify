@@ -6,6 +6,7 @@ import { SongCacheService } from '../song-cache.service';
 import { MatDialog } from '@angular/material/dialog';
 import { AuthService } from '../../../auth/auth.service';
 import { UpdateSongComponent } from '../update-song/update-song.component';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Component({
   selector: 'app-song-view',
@@ -19,13 +20,14 @@ export class SongViewComponent {
     genres: [],
     imageKey: "",
     audioKey: "",
-    rating: 4.5,
+    averageRating: null, 
+    ratingCount: 0
   }
   songId: string = "";
   audioSrc: string | null = null;
   isPlaying = false;
   isAdmin = false;
-  constructor(private contentService: ContentService, private router: Router, private cache: SongCacheService, private auth: AuthService, private dialog: MatDialog) {
+  constructor(private contentService: ContentService, private snackBar: MatSnackBar,private router: Router, private cache: SongCacheService, private auth: AuthService, private dialog: MatDialog) {
     const navigation = this.router.getCurrentNavigation();
     this.songId = navigation?.extras?.state?.['songId'];
     console.log(this.songId)
@@ -52,8 +54,7 @@ export class SongViewComponent {
   }
   onSongRated(value: number) {
     console.log(`Song rated with ${value}/5`);
-    // po želji: prikaz poruke
-    //this.snackBar.open(`Thanks for rating "${this.song.name}" ${value}/5`, 'Close', { duration: 2500 });
+    this.snackBar.open(`Thanks for rating "${this.song.title}" ${value}/5`, 'Close', { duration: 2500 });
   }
   
   async onDownload(){

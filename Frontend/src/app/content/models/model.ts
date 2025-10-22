@@ -13,7 +13,8 @@ export interface Song {
     genres: string[],
     imageKey: string,
     audioKey: string,
-    rating: number,
+    averageRating?: number | null; 
+    ratingCount?: number;
 }
 
 export interface Album {

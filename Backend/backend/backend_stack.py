@@ -527,11 +527,13 @@ class BackendStack(Stack):
             handler="get_single.handler",
             code=_lambda.Code.from_asset("backend/lambdas/content"),
             environment={
-                "SINGLE_TABLE": table_singles.table_name
+                "SINGLE_TABLE": table_singles.table_name,
+                "RATINGS_TABLE": table_ratings.table_name
             }
         )
         table_singles.grant_read_data(get_single_lambda)
-
+        table_ratings.grant_read_data(get_single_lambda)
+        
         get_single = api.root.add_resource("get-single",
             default_cors_preflight_options=apigw.CorsOptions(
                 allow_origins=apigw.Cors.ALL_ORIGINS,
@@ -710,22 +712,16 @@ class BackendStack(Stack):
             authorizer=authorizer,
         )
         # ------------- RATING END ----------------- 
-        # U definiciji singles_table:
+        
         table_singles.add_global_secondary_index(
-            index_name="SingleIdIndex", 
-            # PK mora biti singleId za Query sa samo singleId
-            partition_key=dynamodb.Attribute(name="singleId", type=dynamodb.AttributeType.STRING),
-            # Projektovanje samo ključnih atributa i žanrova
-            non_key_attributes=['genres', 'artistId'], 
+            index_name="SingleIdIndexV2", 
+            partition_key=dynamodb.Attribute(name="singleId", type=dynamodb.AttributeType.STRING), 
             projection_type=dynamodb.ProjectionType.ALL 
         )       
-        # U definiciji albums_table:
+        
         table_albums.add_global_secondary_index(
-            index_name="AlbumIdIndex", 
-            # PK mora biti albumId za Query sa samo albumId
+            index_name="AlbumIdIndexV2", 
             partition_key=dynamodb.Attribute(name="albumId", type=dynamodb.AttributeType.STRING),
-            # Projektovanje samo ključnih atributa i žanrova
-            non_key_attributes=['genres', 'artistId'],
             projection_type=dynamodb.ProjectionType.ALL  
         )
         # ------------- GSI ZA ALBUM/SINGLE ----------------- 
