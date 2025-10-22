@@ -3,12 +3,14 @@ import os, json, uuid, base64, boto3, datetime
 s3  = boto3.client("s3")
 ddb = boto3.client("dynamodb")
 lambda_client = boto3.client("lambda")
+sns = boto3.client("sns")
 
 ALBUMS_TABLE  = os.environ["ALBUMS_TABLE"]
 SINGLES_TABLE = os.environ["SINGLES_TABLE"]
 AUDIO_BUCKET  = os.environ["AUDIO_BUCKET"]
 IMAGES_BUCKET = os.environ["IMAGES_BUCKET"]
 FILTER_ADD_LAMBDA = os.environ["FILTER_ADD_LAMBDA"]
+NEW_CONTENT_TOPIC_ARN = os.environ["NEW_CONTENT_TOPIC_ARN"]
 
 def cors():
     return {
@@ -120,6 +122,23 @@ def handler(event, _):
                 InvocationType="Event",
                 Payload=json.dumps(payload)
             )
+
+            try:
+                sns_message = {
+                    'contentType': 'album',
+                    'contentId': albumId,
+                    'title': title,
+                    'artistIds': artistIds, 
+                    'genres': genres
+                }
+                sns.publish(
+                    TopicArn=NEW_CONTENT_TOPIC_ARN,
+                    Message=json.dumps({'default': json.dumps(sns_message)}),
+                    MessageStructure='json'
+                )
+                print(f"Published SNS message for album {albumId}")
+            except Exception as sns_error:
+                print(f"Error publishing SNS message for album {albumId}: {str(sns_error)}")
 
         return {"statusCode":201,"headers":cors(),"body":json.dumps({"albumId": albumId, "tracks": created})}
     except Exception as e:
