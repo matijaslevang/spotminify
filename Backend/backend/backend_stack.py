@@ -463,11 +463,13 @@ class BackendStack(Stack):
             handler="get_artist.handler",
             code=_lambda.Code.from_asset("backend/lambdas/content"),
             environment={
-                "ARTIST_TABLE": table_artists.table_name
+                "ARTIST_TABLE": table_artists.table_name,
+                "RATINGS_TABLE": table_ratings.table_name
             }
         )
         table_artists.grant_read_data(get_artist_lambda)
-
+        table_ratings.grant_read_data(get_artist_lambda)
+        
         get_artist = api.root.add_resource("get-artist",
             default_cors_preflight_options=apigw.CorsOptions(
                 allow_origins=apigw.Cors.ALL_ORIGINS,
@@ -554,10 +556,12 @@ class BackendStack(Stack):
             handler="get_album.handler",
             code=_lambda.Code.from_asset("backend/lambdas/content"),
             environment={
-                "ALBUM_TABLE": table_albums.table_name
+                "ALBUM_TABLE": table_albums.table_name,
+                "RATINGS_TABLE": table_ratings.table_name
             }
         )
         table_albums.grant_read_data(get_album_lambda)
+        table_ratings.grant_read_data(get_album_lambda)
 
         get_album = api.root.add_resource("get-album",
             default_cors_preflight_options=apigw.CorsOptions(

@@ -1,6 +1,16 @@
 <div class="container">
     <img class="album-image" src={{album.coverKey}} alt={{album.title}} [class.spinning]="isPlaying">
     <p class="album-name">{{album.title}} by {{album.artistIds}} - {{album.genres}}</p>
+    <br>
+    <div class="average-rating-display">
+        <ng-container *ngIf="album.averageRating !== null && album.ratingCount > 0; else noRating">
+            <span class="rating-value">⭐️ {{ album.averageRating | number:'1.2-2' }}/5</span>
+            <span class="rating-count"> ({{ album.ratingCount }} ratings)</span>
+        </ng-container>
+        <ng-template #noRating>
+            <span class="no-rating-message">Be the first to rate this song!</span>
+        </ng-template>
+    </div>
     <div class="album-player" *ngFor="let single of albumSingles">
         <audio #audioPlayer controls (play)="onPlay(audioPlayer)" (pause)="onPause()" [src]="single.audioKey">
             Your browser does not support the audio element.

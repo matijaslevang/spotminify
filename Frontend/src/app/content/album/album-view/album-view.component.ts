@@ -17,7 +17,8 @@ export class AlbumViewComponent {
     artistIds: [],
     genres: [],
     coverKey: "",
-    rating: 4.5,
+    averageRating: null, 
+    ratingCount: 0
   }
   albumId: string;
   albumSingles: Song[] = []
@@ -75,7 +76,12 @@ export class AlbumViewComponent {
 
   onAlbumRated(value: number) {
     console.log(`Album rated ${value}/5`);
+    this.contentService.getAlbum(this.albumId).subscribe({
+      next: (album: Album) => {
+        this.album = album;
+        console.log(album)
+      }
+    })
     this.snackBar.open(`Thanks for rating ${this.album.title}: ${value}/5`, 'Close', { duration: 2500 });
-    // po želji snackbar/toast
   }
 }

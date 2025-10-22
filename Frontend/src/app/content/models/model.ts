@@ -3,7 +3,9 @@ export interface Artist {
     name: string,
     biography: string,
     genres: string[],
-    imageUrl: string
+    imageUrl: string,
+    averageRating?: number | null; 
+    ratingCount?: number;
 }
 
 export interface Song {
@@ -23,7 +25,8 @@ export interface Album {
     artistIds: string[],
     genres: string[],
     coverKey: string,
-    rating: number,
+    averageRating?: number | null; 
+    ratingCount?: number;
 }
 
 export interface Genre {

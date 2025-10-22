@@ -14,7 +14,8 @@ export class RateContentComponent {
   @Input() buttonLabel = 'Rate content';             // opcionalno
   @Output() rated = new EventEmitter<number>();
 
-  @ViewChild('dialogTpl') dialogTpl!: TemplateRef<any>;
+  //@ViewChild('dialogTpl') dialogTpl!: TemplateRef<any>;
+  @ViewChild('dialogTpl', { static: false }) dialogTpl!: TemplateRef<any>;
   rating = 0;
   submitting = false;
 

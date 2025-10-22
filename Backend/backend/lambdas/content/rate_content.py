@@ -84,7 +84,7 @@ def handler(event, context):
         user_role = event['requestContext']['authorizer']['claims']['custom:role']
         
         #if user_role != 'User': # Proverite tačan naziv uloge
-        #     return {'statusCode': 403, 'body': json.dumps({'message': 'Forbidden: Only regular users can rate.'}), 'headers': cors_headers()}
+        #    return {'statusCode': 403, 'body': json.dumps({'message': 'Forbidden: Only regular users can rate.'}), 'headers': cors_headers()}
 
         # 2. PARSIRANJE TELA ZAHTEVA
         body = json.loads(event['body'])

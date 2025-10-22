@@ -20,6 +20,7 @@ import { RateContentComponent } from './rate-content/rate-content.component';
 import { UpdateAlbumComponent } from './album/update-album/update-album.component';
 import { UpdateArtistComponent } from './artist/update-artist/update-artist.component';
 import { UpdateSongComponent } from './song/update-song/update-song.component';
+import { MatDialogModule } from '@angular/material/dialog';
 
 @NgModule({
   declarations: [
@@ -52,6 +53,7 @@ import { UpdateSongComponent } from './song/update-song/update-song.component';
     MatButtonModule,
     MatIconModule,
     MatChipsModule,
+    MatDialogModule,
     MatProgressSpinnerModule
   ]
 })
