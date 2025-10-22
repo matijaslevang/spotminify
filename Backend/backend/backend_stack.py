@@ -71,6 +71,11 @@ class BackendStack(Stack):
             sort_key=dynamodb.Attribute(name="username", type=dynamodb.AttributeType.STRING)
         )
 
+        new_content_topic = sns.Topic(
+            self, "NewContentTopic",
+            topic_name="new-content-topic"
+        )
+
         table_activity = dynamodb.Table(
             self, "Activity",
             partition_key=dynamodb.Attribute(name="username", type=dynamodb.AttributeType.STRING),
@@ -902,11 +907,13 @@ class BackendStack(Stack):
                 "AUDIO_BUCKET":  audio_bucket.bucket_name,
                 "IMAGES_BUCKET": images_bucket.bucket_name,
                 "GENRE_INDEX_TABLE": table_genre_index.table_name,
-                "FILTER_ADD_LAMBDA": filter_add_lambda.function_name
+                "FILTER_ADD_LAMBDA": filter_add_lambda.function_name,
+                "NEW_CONTENT_TOPIC_ARN": new_content_topic.topic_arn
             },
             #log_retention=logs.RetentionDays.ONE_WEEK
         )
         filter_add_lambda.grant_invoke(create_album_lambda)
+        new_content_topic.grant_publish(create_album_lambda)
 
         # NEW create_single_lambda
         
@@ -919,12 +926,13 @@ class BackendStack(Stack):
                 "SINGLES_TABLE": table_singles.table_name,
                 "AUDIO_BUCKET":  audio_bucket.bucket_name,
                 "IMAGES_BUCKET": images_bucket.bucket_name,
-                "FILTER_ADD_LAMBDA": filter_add_lambda.function_name
+                "FILTER_ADD_LAMBDA": filter_add_lambda.function_name,
+                "NEW_CONTENT_TOPIC_ARN": new_content_topic.topic_arn
             },
             #log_retention=logs.RetentionDays.ONE_WEEK
         )
         filter_add_lambda.grant_invoke(create_single_lambda)
-
+        new_content_topic.grant_publish(create_single_lambda)
 
         albums.add_method(
             "POST",
@@ -1082,10 +1090,6 @@ class BackendStack(Stack):
 
         # ----------------- SNS & Notifications -----------------
 
-        new_content_topic = sns.Topic(
-            self, "NewContentTopic",
-            topic_name="new-content-topic"
-        )
 
         notification_queue = sqs.Queue(
             self, "NotificationQueue",
@@ -1104,12 +1108,30 @@ class BackendStack(Stack):
             code=_lambda.Code.from_asset("backend/lambdas/notifications"),
             environment={
                 "SUBSCRIPTIONS_TABLE_NAME": table_subscriptions.table_name,
-                "GSI_NAME": "by-target-id"
+                "GSI_NAME": "by-target-id",
+                "USER_POOL_ID": self.user_pool.user_pool_id,
+                "ARTISTS_TABLE_NAME": table_artists.table_name
             }
         )
 
+        table_artists.grant_read_data(send_notifications_lambda)
+
         send_notifications_lambda.add_event_source(
             lambda_event_sources.SqsEventSource(notification_queue)
+        )
+
+        send_notifications_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["cognito-idp:AdminGetUser"],
+                resources=[self.user_pool.user_pool_arn]
+            )
+        )
+
+        send_notifications_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["ses:SendEmail"],
+                resources=["*"]
+            )
         )
 
         table_subscriptions.grant_read_data(send_notifications_lambda)
