@@ -1,36 +1,61 @@
 import { Injectable } from '@angular/core';
 import { openDB, IDBPDatabase } from 'idb';
 
+const DB_NAME = 'OfflineAudioDB';
+const STORE_NAME = 'Songs';
+
 @Injectable({
   providedIn: 'root'
 })
 export class SongCacheService {
-  private dbp: Promise<IDBPDatabase<any>>;
+  private dbPromise: Promise<IDBPDatabase>;
 
-  constructor() {
-    this.dbp = openDB('offline-audio', 1, {
-      upgrade(db) { db.createObjectStore('songs'); }
-    });
-  }
+    constructor() {
+      this.dbPromise = openDB(DB_NAME, 1, {
+        upgrade(db) {
+          db.createObjectStore(STORE_NAME);
+          console.log(`IndexedDB: Store '${STORE_NAME}' created.`);
+        },
+      });
+    }
 
-  async isCached(id: string | number): Promise<boolean> {
-    return !!(await (await this.dbp).get('songs', String(id)));
-  }
+    /**
+     * Preuzima audio fajl sa date URL adrese i kešira ga u IndexedDB.
+     * @param songId ID pesme (koristi se kao ključ za skladištenje)
+     * @param audioUrl Direktni URL S3 fajla (npr. 'https://s3.amazonaws.com/bucket/audio/pesma.mp3')
+     */
+    async download(songId: string, audioUrl: string): Promise<void> {
+      console.log(`Caching: Attempting to download ${songId} from ${audioUrl}`);
+      
+      const response = await fetch(audioUrl);
 
-  async getObjectUrl(id: string | number): Promise<string | null> {
-    const blob = await (await this.dbp).get('songs', String(id));
-    return blob ? URL.createObjectURL(blob) : null;
-    // Napomena: čuvaj referencu i zovi URL.revokeObjectURL(...) kad menjaš izvor da ne curi memorija.
-  }
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
 
-  async download(id: string | number, url: string): Promise<void> {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('Download failed');
-    const blob = await res.blob();
-    await (await this.dbp).put('songs', blob, String(id));
-  }
+      const audioBlob = await response.blob();
+   
+      const db = await this.dbPromise;
+      await db.put(STORE_NAME, audioBlob, songId);
+      
+      console.log(`Caching: Successfully saved ${songId} to IndexedDB.`);
+    }
 
-  async remove(id: string | number): Promise<void> {
-    await (await this.dbp).delete('songs', String(id));
+    /**
+     * Proverava IndexedDB i vraća lokalni Blob URL ako je pesma keširana.
+     * @param songId ID pesme
+     * @returns Lokalni Blob URL (npr. 'blob:http://...') ili null
+     */
+    async getObjectUrl(songId: string): Promise<string | null> {
+      const db = await this.dbPromise;
+
+      const audioBlob = await db.get(STORE_NAME, songId);
+
+      if (audioBlob instanceof Blob) {
+        const blobUrl = URL.createObjectURL(audioBlob);
+        return blobUrl;
+      }
+      
+      return null;
+    }
   }
-}

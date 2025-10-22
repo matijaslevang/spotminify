@@ -24,8 +24,11 @@ export class SongViewComponent {
     ratingCount: 0
   }
   songId: string = "";
-  audioSrc: string | null = null;
+
+  cachedAudioSrc: string | null = null; 
+  isCached = false; 
   isPlaying = false;
+
   isAdmin = false;
   constructor(private contentService: ContentService, private snackBar: MatSnackBar,private router: Router, private cache: SongCacheService, private auth: AuthService, private dialog: MatDialog) {
     const navigation = this.router.getCurrentNavigation();
@@ -35,14 +38,24 @@ export class SongViewComponent {
   }
 
   async ngOnInit() {
-    const cached = await this.cache.getObjectUrl(this.song.singleId!);
-    this.audioSrc = cached ?? this.song.audioKey; // preferiraj keš
     this.contentService.getSong(this.songId).subscribe({
-      next: (song: Song) => {
+      next: async (song: Song) => {
         this.song = song;
+        await this.checkCacheStatus(); 
         console.log(song)
       }
     })
+  }
+
+  async checkCacheStatus(): Promise<void> {
+    const songId = this.song.singleId!; 
+    const cachedUrl = await this.cache.getObjectUrl(songId); 
+    this.isCached = !!cachedUrl; 
+    this.cachedAudioSrc = cachedUrl; 
+
+    if (cachedUrl) {
+        console.log("Offline version available.");
+    }
   }
 
   onPlay(): void {
@@ -64,14 +77,18 @@ export class SongViewComponent {
   }
   
   async onDownload(){
-    await this.cache.download(this.song.singleId!, this.song.audioKey);
-    this.audioSrc = await this.cache.getObjectUrl(this.song.singleId!);
-  }
+    const downloadUrl = this.song.audioKey; 
+    try {
+        this.snackBar.open(`Downloading ${this.song.title}...`, 'Close');
+        await this.cache.download(this.song.singleId!, downloadUrl); 
+        await this.checkCacheStatus(); 
 
-  async onRemove(){
-    await this.cache.remove(this.song.singleId!);
-    this.audioSrc = this.song.audioKey;
+        this.snackBar.open(`${this.song.title} ready for offline use!`, 'Close', { duration: 3000 });
+    } catch (e) {
+        this.snackBar.open(`Download failed! Check console.`, 'Close', { duration: 3000 });
+    }
   }
+  
   openEditSingle(){
   const ref = this.dialog.open(UpdateSongComponent, {
     width: '680px',
