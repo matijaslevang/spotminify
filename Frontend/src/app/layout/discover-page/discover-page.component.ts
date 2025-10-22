@@ -75,7 +75,8 @@ export class DiscoverPageComponent {
 
     const payload = {
       targetId: selectedGenre.genreName,
-      subscriptionType: 'GENRE'
+      subscriptionType: 'GENRE',
+      genres: [selectedGenre.genreName]
     };
 
     this.contentService.subscribe(payload).subscribe({
@@ -100,7 +101,7 @@ export class DiscoverPageComponent {
     const selectedGenre = this.filterForm.get('genre')?.value;
     if (!selectedGenre) return;
 
-    this.contentService.unsubscribe(selectedGenre.genreName).subscribe({
+    this.contentService.unsubscribe(selectedGenre.genreName, "GENRE", [selectedGenre.genreName]).subscribe({
       next: () => {
         this.mySubscribedGenres.delete(selectedGenre.genreName);
         this.snackBar.open(`Unsubscribed from ${selectedGenre.genreName}`, 'Close', { duration: 3000 });

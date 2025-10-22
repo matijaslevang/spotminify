@@ -40,7 +40,7 @@ export class SubscriptionManagementComponent implements OnInit {
   }
 
   unsubscribe(subscription: any): void {
-    this.contentService.unsubscribe(subscription.targetId).subscribe({
+    this.contentService.unsubscribe(subscription.targetId, subscription.subscriptionType, subscription.genres).subscribe({
       next: () => {
         if (subscription.subscriptionType === 'ARTIST') {
           this.artistSubscriptions = this.artistSubscriptions.filter(s => s.targetId !== subscription.targetId);

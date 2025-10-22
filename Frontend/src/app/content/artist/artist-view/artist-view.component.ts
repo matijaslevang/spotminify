@@ -93,7 +93,7 @@ export class ArtistViewComponent implements OnInit {
 
   subscribeToArtist(): void {
     if (!this.artist?.artistId) return;
-    const payload = { targetId: this.artist.artistId, subscriptionType: 'ARTIST', artistName: this.artist.name, imageUrl: this.artist.imageUrl };
+    const payload = { targetId: this.artist.artistId, subscriptionType: 'ARTIST', artistName: this.artist.name, imageUrl: this.artist.imageUrl, genres: this.artist.genres };
     this.contentService.subscribe(payload).subscribe({
       next: () => {
         this.mySubscribedArtistIds.add(this.artist.artistId);
@@ -105,7 +105,7 @@ export class ArtistViewComponent implements OnInit {
 
   unsubscribeFromArtist(): void {
     if (!this.artist?.artistId) return;
-    this.contentService.unsubscribe(this.artist.artistId).subscribe({
+    this.contentService.unsubscribe(this.artist.artistId, "ARTIST", this.artist.genres).subscribe({
       next: () => {
         this.mySubscribedArtistIds.delete(this.artist.artistId);
         this.snackBar.open(`Unsubscribed from ${this.artist.name}`, 'Close', { duration: 3000 });
