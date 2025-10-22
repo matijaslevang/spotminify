@@ -712,7 +712,7 @@ class BackendStack(Stack):
             partition_key=dynamodb.Attribute(name="singleId", type=dynamodb.AttributeType.STRING),
             # Projektovanje samo ključnih atributa i žanrova
             non_key_attributes=['genres', 'artistId'], 
-            projection_type=dynamodb.ProjectionType.INCLUDE 
+            projection_type=dynamodb.ProjectionType.ALL 
         )       
         # U definiciji albums_table:
         table_albums.add_global_secondary_index(
@@ -721,7 +721,7 @@ class BackendStack(Stack):
             partition_key=dynamodb.Attribute(name="albumId", type=dynamodb.AttributeType.STRING),
             # Projektovanje samo ključnih atributa i žanrova
             non_key_attributes=['genres', 'artistId'],
-            projection_type=dynamodb.ProjectionType.INCLUDE
+            projection_type=dynamodb.ProjectionType.ALL  
         )
         # ------------- GSI ZA ALBUM/SINGLE ----------------- 
         

@@ -80,7 +80,7 @@ def handler(event, context):
             IndexName='AlbumIdIndex', 
             KeyConditionExpression=Key('albumId').eq(album_id)
         )
-        
+        print(response)
         item = response.get('Items', [None])[0]
         
         if item:
