@@ -4,10 +4,12 @@ s3  = boto3.client("s3")
 ddb = boto3.client("dynamodb")
 lambda_client = boto3.client("lambda")
 sns = boto3.client("sns")
+sqs_client = boto3.client('sqs')
 
 SINGLES_TABLE = os.environ["SINGLES_TABLE"]
 FILTER_ADD_LAMBDA = os.environ["FILTER_ADD_LAMBDA"]
 NEW_CONTENT_TOPIC_ARN = os.environ["NEW_CONTENT_TOPIC_ARN"]
+queue_url = os.environ["QUEUE_URL"]
 
 def cors():
     return {
@@ -85,6 +87,18 @@ def handler(event, _):
             FunctionName=FILTER_ADD_LAMBDA,
             InvocationType="Event",
             Payload=json.dumps(payload)
+        )
+
+        payload_feed = {
+            "content": item,
+            "contentId": singleId,
+            "contentType": "single",
+            "genres": json.dumps(list(genres))
+        }
+        print("send message")
+        sqs_client.send_message(
+            QueueUrl=queue_url,
+            MessageBody=json.dumps(payload_feed)
         )
 
         try:

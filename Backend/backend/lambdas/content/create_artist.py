@@ -4,6 +4,7 @@ import json
 import uuid
 import base64
 
+sqs_client = boto3.client('sqs')
 s3 = boto3.client("s3")
 dynamodb = boto3.client("dynamodb")
 lambda_client = boto3.client("lambda")
@@ -11,6 +12,7 @@ lambda_client = boto3.client("lambda")
 BUCKET = os.environ["BUCKET_NAME"]
 TABLE = os.environ["TABLE_NAME"]
 FILTER_ADD_LAMBDA = os.environ["FILTER_ADD_LAMBDA"]
+queue_url = os.environ["QUEUE_URL"]
 
 artist_id = str(uuid.uuid4())
 
@@ -50,15 +52,17 @@ def handler(event, context):
         )
         image_url = f"https://{BUCKET}.s3.amazonaws.com/{key}"
 
+        item = {
+            "artistId": {"S": artist_id},
+            "name": {"S": name},
+            "biography": {"S": biography},
+            "genres": {"SS": genres},
+            "imageUrl": {"S": image_url}
+        }
+
         dynamodb.put_item(
             TableName=TABLE,
-            Item={
-                "artistId": {"S": artist_id},
-                "name": {"S": name},
-                "biography": {"S": biography},
-                "genres": {"SS": genres},
-                "imageUrl": {"S": image_url}
-            }
+            Item=item
         )
 
         payload = {
@@ -72,6 +76,26 @@ def handler(event, context):
             FunctionName=FILTER_ADD_LAMBDA,
             InvocationType="Event",
             Payload=json.dumps(payload)
+        )
+
+        content = {
+            "artistId": artist_id,
+            "name": name,
+            "biography": biography,
+            "genres": genres,
+            "imageUrl": image_url
+        }
+        print("send message")
+        payload_feed = {
+            "content": content,
+            "contentId": artist_id,
+            "contentType": "artist",
+            "genres": json.dumps(list(genres))
+        }
+        print("send message")
+        sqs_client.send_message(
+            QueueUrl=queue_url,
+            MessageBody=json.dumps(payload_feed)
         )
 
         return {

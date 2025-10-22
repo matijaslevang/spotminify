@@ -77,7 +77,7 @@ def handler(event, context):
             songs_scored.sort(key=lambda x: x[1], reverse=True)
             albums_scored.sort(key=lambda x: x[1], reverse=True)
 
-            element_number = 5
+            element_number = 10
             artists_scored = artists_scored[:element_number]
             songs_scored = songs_scored[:element_number]
             albums_scored = albums_scored[:element_number]

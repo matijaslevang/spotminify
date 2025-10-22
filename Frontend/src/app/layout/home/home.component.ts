@@ -21,15 +21,15 @@ export class HomeComponent {
       next: (feed) => {
         console.log(feed)
         this.recommendedSongs = feed.recommendedSongs
-          .sort((a: any, b: any) => b.score - a.score)  // Sort by "score" in descending order
+          .sort((a: any, b: any) => b.score - a.score)
           .map((item: any) => item.content);
 
         this.recommendedArtists = feed.recommendedArtists
-          .sort((a: any, b: any) => b.score - a.score)  // Sort by "score" in descending order
+          .sort((a: any, b: any) => b.score - a.score)
           .map((item: any) => item.content);
 
         this.recommendedAlbums = feed.recommendedAlbums
-          .sort((a: any, b: any) => b.score - a.score)  // Sort by "score" in descending order
+          .sort((a: any, b: any) => b.score - a.score)
           .map((item: any) => item.content);
       }
     })
