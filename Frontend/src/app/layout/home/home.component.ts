@@ -19,6 +19,7 @@ export class HomeComponent {
   ngOnInit() {
     this.contentService.getRecommendedFeed().subscribe({
       next: (feed) => {
+        console.log(feed)
         this.recommendedSongs = feed.recommendedSongs;
         this.recommendedArtists = feed.recommendedArtists;
         this.recommendedAlbums = feed.recommendedAlbums;
