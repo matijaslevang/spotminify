@@ -15,11 +15,25 @@
         Your browser does not support the audio element.
     </audio>
     <br>
-    <a (click)="onDownload()">Download for offline</a>
-        <a *ngIf="audioSrc !== song.audioKey" (click)="onRemove()">Remove download</a>
-        <audio [src]="audioSrc" controls></audio>
     <br>
     
+    <ng-container *ngIf="!isCached; else cachedMessage">
+        <a (click)="onDownload()">Download for offline</a>
+    </ng-container>
+    <ng-template #cachedMessage>
+        <p class="downloaded-status">✅ Song is downloaded for offline demo.</p>
+    </ng-template>
+
+    <br>
+
+    <ng-container *ngIf="isCached">
+        <h3>2. Offline Player (Keširani izvor)</h3>
+        <audio class="song-player-cached" controls [src]="cachedAudioSrc">
+            Your browser does not support the audio element.
+        </audio>
+    </ng-container>
+
+    <br>
     <app-rate-content
         [contentType]="'SONG'"
         [contentId]="song.singleId"
