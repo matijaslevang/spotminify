@@ -9,8 +9,9 @@
             
             <div class="genres-list">
                 <mat-chip-listbox aria-label="Artist genres">
-                    <mat-chip *ngFor="let genre of artist.genres">{{ genre }}</mat-chip>
+                    <mat-chip *ngFor="let genre of artist.genres || []">{{ genre }}</mat-chip>
                 </mat-chip-listbox>
+
             </div>
             
             <p class="artist-bio">{{ artist.biography }}</p>
@@ -29,6 +30,17 @@
 
             </div>
             <br>
+            <div class="average-rating-display">
+                <ng-container *ngIf="artist.averageRating !== null && artist.ratingCount > 0; else noRating">
+                    <span class="rating-value">⭐️ {{ artist.averageRating | number:'1.2-2' }}/5</span>
+                    <span class="rating-count"> ({{ artist.ratingCount }} ratings)</span>
+                </ng-container>
+                <ng-template #noRating>
+                    <span class="no-rating-message">Be the first to rate this artist!</span>
+                </ng-template>
+            </div>
+            <br>
+
             <app-rate-content
                 [contentType]="'ARTIST'"
                 [contentId]="artist.artistId"

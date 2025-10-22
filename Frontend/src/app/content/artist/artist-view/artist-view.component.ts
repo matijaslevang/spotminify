@@ -67,10 +67,10 @@ export class ArtistViewComponent implements OnInit {
   }
   loadContentForArtist(artistName: string): void {
     this.contentService.getSongsByArtist(artistName).subscribe(songs => {
-      this.artistSongs = songs;
+      this.artistSongs = songs || [];
     });
     this.contentService.getAlbumsByArtist(artistName).subscribe(albums => {
-      this.artistAlbums = albums;
+      this.artistAlbums = albums || [];
     });
   }
 
@@ -113,8 +113,16 @@ export class ArtistViewComponent implements OnInit {
       error: (err) => this.snackBar.open('Failed to unsubscribe.', 'Close', { duration: 3000 })
     });
   }
+  
   onArtistRated(value: number) {
-  this.snackBar.open(`Thanks for rating ${this.artist.name}: ${value}/5`, 'Close', { duration: 2500 });
-}
+      console.log(`Artist rated ${value}/5`);
+      this.contentService.getArtist(this.artistId).subscribe({
+        next: (artist: Artist) => {
+          this.artist = artist;
+          console.log(artist)
+        }
+      })
+      this.snackBar.open(`Thanks for rating ${this.artist.name}: ${value}/5`, 'Close', { duration: 2500 });
+    }
 
 }

@@ -54,6 +54,12 @@ export class SongViewComponent {
   }
   onSongRated(value: number) {
     console.log(`Song rated with ${value}/5`);
+    this.contentService.getSong(this.songId).subscribe({
+      next: (song: Song) => {
+        this.song = song;
+        console.log(song)
+      }
+    })
     this.snackBar.open(`Thanks for rating "${this.song.title}" ${value}/5`, 'Close', { duration: 2500 });
   }
   

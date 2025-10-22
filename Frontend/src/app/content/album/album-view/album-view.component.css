@@ -37,3 +37,32 @@
     flex-direction: column;
     align-items: center;
 }
+.average-rating-display {
+    /* Uklapa se u centrirani flow elementa .container */
+    margin-bottom: 20px; /* Odvaja ocenu od audio plejera */
+    font-size: 1.2rem; /* Nešto veći font */
+    color: #4CAF50; /* Boja za isticanje (zelena se često koristi za pozitivne ocene) */
+    font-weight: 600;
+}
+
+.rating-value {
+    /* Prikaz zvezdice i proseka */
+    letter-spacing: 0.5px;
+    margin-right: 8px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background-color: rgba(76, 175, 80, 0.1); /* Blaga pozadina za isticanje ocene */
+}
+
+.rating-count {
+    /* Broj ocena je suptilniji */
+    font-size: 0.9em; /* Malo manji font od proseka */
+    color: #888;
+    font-weight: normal;
+}
+
+.no-rating-message {
+    font-style: italic;
+    color: #aaa;
+    font-size: 1rem;
+}
