@@ -62,7 +62,8 @@ export class SongCardComponent implements AfterViewInit {
          this.contentService.deleteSingle(this.song.singleId).subscribe({
          next: (response) => {
           console.log('Song deleted successfully', response);
-         alert('Pesma uspešno obrisana!');
+          alert('Pesma uspešno obrisana!');
+          window.location.reload();
          // TODO: Dodajte logiku za osvežavanje liste pesama nakon brisanja (npr. emitovanje eventa)
          },
          error: (error) => {
