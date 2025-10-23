@@ -10,9 +10,9 @@ import { MatSnackBar } from '@angular/material/snack-bar';
   styleUrl: './discover-page.component.css'
 })
 export class DiscoverPageComponent {
-  resultSongs: FilterDetails[] = []
-  resultArtists: FilterDetails[] = []
-  resultAlbums: FilterDetails[] = []
+  resultSongs: Song[] = []
+  resultArtists: Artist[] = []
+  resultAlbums: Album[] = []
   mySubscribedGenres = new Set<string>();
   
   genres: Genre[] = []
