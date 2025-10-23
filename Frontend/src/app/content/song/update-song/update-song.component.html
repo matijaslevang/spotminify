@@ -25,6 +25,10 @@
       <mat-error *ngIf="form.get('artistIds')?.invalid && form.get('artistIds')?.touched">Required</mat-error>
     </mat-form-field>
 
+    <!-- <div class="field-toggle">
+        <mat-slide-toggle formControlName="explicit">Explicit Content</mat-slide-toggle>
+    </div> -->
+
     <div class="dropzone audio-dropzone" (click)="audioFileInput.click()">
      <input #audioFileInput type="file" accept="audio/*" (change)="onAudioFile($event)" hidden>
        <div class="dz-inner">

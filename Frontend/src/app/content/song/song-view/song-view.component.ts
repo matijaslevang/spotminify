@@ -94,11 +94,20 @@ export class SongViewComponent {
   const ref = this.dialog.open(UpdateSongComponent, {
     width: '680px',
     data: {
-      single: this.song,                 // očekuje { songId, name, artists[], genres[], imageUrl?, explicit? ... }
-      artistOptions: this.song.artistIds, // ili dohvati sa API-ja
+      single: this.song,              
+      selectedAritsts: this.song.artistNames,
       availableGenres: this.song.genres
     }
   });
-  //ref.afterClosed().subscribe(ok => ok && this.reloadSong());
+  ref.afterClosed().subscribe(ok => ok && this.reloadSong());
 }
+  reloadSong(){
+    this.contentService.getSong(this.songId).subscribe({
+        next: async (song: Song) => {
+          this.song = song;
+          await this.checkCacheStatus(); 
+          console.log(song)
+        }
+      })
+  }
 }

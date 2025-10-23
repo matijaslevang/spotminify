@@ -39,9 +39,7 @@ export class AlbumViewComponent {
     const ref = this.dialog.open(UpdateAlbumComponent, {
       width: '720px',
       data: {
-        album: this.album,                 // { albumId, name, artists[], genres[], imageUrl? ... }
-        // artistOptions: this.artistOptions, // ili API
-        // genreOptions: this.genreOptions
+        album: this.album
       }
     });
    // ref.afterClosed().subscribe(ok => ok && this.reloadAlbum());
