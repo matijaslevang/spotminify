@@ -91,13 +91,6 @@ class BackendStack(Stack):
             topic_name="new-content-topic"
         )
 
-        table_activity = dynamodb.Table(
-            self, "Activity",
-            partition_key=dynamodb.Attribute(name="username", type=dynamodb.AttributeType.STRING),
-            sort_key=dynamodb.Attribute(name="accessTime", type=dynamodb.AttributeType.STRING),  # store datetime as ISO string
-            removal_policy=RemovalPolicy.DESTROY
-        )
-
         table_ratings = dynamodb.Table(
             self, "Ratings",
             partition_key=dynamodb.Attribute(name="contentId", type=dynamodb.AttributeType.STRING),
