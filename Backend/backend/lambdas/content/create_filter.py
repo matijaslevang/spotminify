@@ -27,7 +27,6 @@ def handler(event, context):
     if content_type == 'artist':
         for genre in content_genres:
             genre_item = item.copy()
-            genre_item.pop("contentArtists")
             genre_item['genreName'] = genre
             genre_index_table.put_item(Item=genre_item)
     
