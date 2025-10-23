@@ -107,7 +107,7 @@ def handler(event, _):
         )
 
         payload_feed = {
-            "content": item,
+            "content": content,
             "contentId": singleId,
             "contentType": "single",
             "genres": json.dumps(list(genres)),
