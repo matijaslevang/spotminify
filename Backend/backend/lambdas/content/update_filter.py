@@ -52,11 +52,14 @@ def handler(event, context):
             'contentType': content_type,
             'content': new_content,
         }
+        print(genre)
+        print(genres_to_add)
+        print(new_item)
+        
         for genre in genres_to_add:
             add_item = new_item.copy()
             add_item['genreName'] = genre
             genre_index_table.put_item(Item=add_item)
-
 
         # 2. AŽURIRANJE IZVOĐAČA (ARTIST_INDEX)
 
