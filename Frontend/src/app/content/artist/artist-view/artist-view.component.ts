@@ -65,8 +65,8 @@ export class ArtistViewComponent implements OnInit {
     this.contentService.getFilteredContentByArtist(this.artistId).subscribe({
       next: (response: any) => {
         console.log(response)
-        this.artistAlbums = response.resultAlbums
-        this.artistSongs = response.resultSongs
+        this.artistAlbums = response.resultAlbums.map((item: any) => item.content);
+        this.artistSongs = response.resultSongs.map((item: any) => item.content);
       }
     })
   }

@@ -52,9 +52,9 @@ export class DiscoverPageComponent {
       let selectedGenre = this.filterForm.get('genre').value
       this.contentService.getFilteredContentByGenre(selectedGenre.genreName).subscribe({
         next: (filteredContent: any) => {
-          this.resultAlbums = filteredContent.resultAlbums
-          this.resultArtists = filteredContent.resultArtists
-          this.resultSongs = filteredContent.resultSongs
+          this.resultAlbums = filteredContent.resultAlbums.map((item: any) => item.content);
+          this.resultArtists = filteredContent.resultArtists.map((item: any) => item.content);
+          this.resultSongs = filteredContent.resultSongs.map((item: any) => item.content);
         }
       })
     }
