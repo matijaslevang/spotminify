@@ -67,21 +67,6 @@ def handler(event, _):
      
         ddb.put_item(TableName=ALBUMS_TABLE, Item=album)
 
-        payload = {
-            "contentId": albumId,
-            "contentType": "album",
-            "contentName": title,
-            "imageUrl": f"https://{IMAGES_BUCKET}.s3.amazonaws.com/{coverKey}",
-            "contentGenres": genres,
-            "contentArtists": artistIds, # TODO check this stuff out
-            "contentArtistNames": artistNames 
-        }
-        lambda_client.invoke(
-            FunctionName=FILTER_ADD_LAMBDA,
-            InvocationType="Event",
-            Payload=json.dumps(payload)
-        )
-
         content = {
             "artistId":  pk_artist_id,      
             "albumId":   albumId,           
@@ -94,12 +79,22 @@ def handler(event, _):
         if coverKey:
             content["coverKey"] = f"https://{IMAGES_BUCKET}.s3.amazonaws.com/{coverKey}"
 
+        payload_filter = {
+            "contentId": albumId,
+            "contentType": "album",
+            "content": content,
+        }
+        lambda_client.invoke(
+            FunctionName=FILTER_ADD_LAMBDA,
+            InvocationType="Event",
+            Payload=json.dumps(payload_filter)
+        )
+
         payload_feed = {
             "content": content,
             "contentId": albumId,
             "contentType": "album",
             "genres": json.dumps(list(genres)),
-            "artistNames": json.dumps(list(artistNames)) 
         }
         print("send message")
         sqs_client.send_message(
@@ -142,20 +137,6 @@ def handler(event, _):
 
             ddb.put_item(TableName=SINGLES_TABLE, Item=item)
             created.append({"singleId": singleId, "trackNo": trno})
-            payload = {
-                "contentId": singleId,
-                "contentType": "single",
-                "contentName": stitle,
-                "imageUrl": f"https://{IMAGES_BUCKET}.s3.amazonaws.com/{ikey}",
-                "contentGenres": sgenres,
-                "contentArtists": sarts, # TODO check this stuff out
-                "contentArtistNames": sartNames
-            }
-            lambda_client.invoke(
-                FunctionName=FILTER_ADD_LAMBDA,
-                InvocationType="Event",
-                Payload=json.dumps(payload)
-            )
 
             content_single = {
                 "artistId":  single_pk_artist_id,
@@ -170,12 +151,23 @@ def handler(event, _):
             }
             if trno is not None: content_single["trackNo"] = int(trno)
             if ikey: content_single["imageKey"] = f"https://{IMAGES_BUCKET}.s3.amazonaws.com/{ikey}"
+
+            payload_filter_single = {
+                "contentId": singleId,
+                "contentType": "single",
+                "content": content_single,
+            }
+            lambda_client.invoke(
+                FunctionName=FILTER_ADD_LAMBDA,
+                InvocationType="Event",
+                Payload=json.dumps(payload_filter_single)
+            )
+
             payload_feed_two = {
                 "content": content_single,
                 "contentId": singleId,
                 "contentType": "single",
                 "genres": json.dumps(list(sgenres)),
-                "artistNames": json.dumps(list(sartNames))
             }
             print("send message")
             sqs_client.send_message(

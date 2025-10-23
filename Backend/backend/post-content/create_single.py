@@ -77,19 +77,33 @@ def handler(event, _):
 
         ddb.put_item(TableName=SINGLES_TABLE, Item=item)
 
-        payload = {
+        content = {
+            "artistId":  pk_artist_id,      # <--- DODATO: Partition Key (PK)
+            "singleId":  singleId,          # <--- Sort Key (SK)
+            "title":     title,
+            "artistIds": artistIds if artistIds else [],
+            "artistNames": artistNames if artistNames else [], 
+            "genres":     genres    if genres    else [],
+            "audioKey":  f"https://{audio_bucket}.s3.amazonaws.com/{audio_key}",
+            "explicit":  explicit,
+            "createdAt": now,
+        }
+        if imageKey:
+            # opciono HEAD i ovde
+            img_bucket, img_key = imageKey.split("/", 1) if imageKey.startswith("s3://") else (os.environ["IMAGES_BUCKET"], imageKey)
+            content["imageKey"] = f"https://{img_bucket}.s3.amazonaws.com/{img_key}"
+        if albumId: content["albumId"] = albumId
+        if trackNo is not None: content["trackNo"] = str(int(trackNo))
+
+        payload_filter = {
             "contentId": singleId,
             "contentType": "single",
-            "contentName": title,
-            "imageUrl": f"https://{img_bucket}.s3.amazonaws.com/{img_key}",
-            "contentGenres": genres,
-            "contentArtists": artistIds,
-            "contentArtistNames": artistNames
+            "content": content,
         }
         lambda_client.invoke(
             FunctionName=FILTER_ADD_LAMBDA,
             InvocationType="Event",
-            Payload=json.dumps(payload)
+            Payload=json.dumps(payload_filter)
         )
 
         payload_feed = {
@@ -97,7 +111,6 @@ def handler(event, _):
             "contentId": singleId,
             "contentType": "single",
             "genres": json.dumps(list(genres)),
-            "artistNames": json.dumps(list(artistNames))
         }
         print("send message")
         sqs_client.send_message(
