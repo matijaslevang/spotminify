@@ -23,7 +23,6 @@ def handler(event, context):
     }
 
     content_genres = content['genres']
-    content_artists = content['artistIds']
 
     if content_type == 'artist':
         for genre in content_genres:
@@ -33,6 +32,7 @@ def handler(event, context):
             genre_index_table.put_item(Item=genre_item)
     
     elif content_type in ['single', 'album']:
+        content_artists = content['artistIds']
         for genre in content_genres:
             genre_item = item.copy()
             genre_item['genreName'] = genre
