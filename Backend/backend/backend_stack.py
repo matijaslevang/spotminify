@@ -10,6 +10,8 @@ from aws_cdk import (
     aws_sqs as sqs,
     aws_dynamodb as dynamodb,
     aws_s3 as s3,
+    aws_s3_notifications as s3n,
+    aws_s3_deployment as s3deploy,
     aws_lambda_event_sources as lambda_event_sources,
     custom_resources as cr,
     aws_sns as sns,
@@ -39,7 +41,31 @@ class BackendStack(Stack):
             self, "UpdateFeedSpecificUserQueue",
             removal_policy=RemovalPolicy.DESTROY
         )
-        
+
+        conversion_queue = sqs.Queue(
+            self, "ConversionQueue",
+            removal_policy=RemovalPolicy.DESTROY,
+            visibility_timeout=Duration.minutes(6)
+        )
+
+        transcription_queue = sqs.Queue(
+            self, "TranscriptionQueue",
+            removal_policy=RemovalPolicy.DESTROY,
+            visibility_timeout=Duration.minutes(6)
+        )
+
+        vosk_layer = _lambda.LayerVersion(
+            self, "VoskLambdaLayer",
+            code=_lambda.Code.from_asset("backend/lambda_layers/vosk_layer.zip"),
+            compatible_runtimes=[_lambda.Runtime.PYTHON_3_9],
+        )
+
+        ffmpeg_layer = _lambda.LayerVersion(
+            self, "FfmpegLayer",
+            code=_lambda.Code.from_asset("backend/lambda_layers/ffmpeg_layer.zip"),
+            compatible_runtimes=[_lambda.Runtime.PYTHON_3_9],
+        ) 
+
         self.user_pool = cognito.UserPool(
             self, "MyNewUserPool",
             self_sign_up_enabled=True,
@@ -91,6 +117,20 @@ class BackendStack(Stack):
             topic_name="new-content-topic"
         )
 
+        table_transcriptions = dynamodb.Table(
+            self, "Transcriptions",
+            partition_key=dynamodb.Attribute(name="singleId", type=dynamodb.AttributeType.STRING),
+            removal_policy=RemovalPolicy.DESTROY
+        )
+
+        # table_ratings = dynamodb.Table(
+        #     self, "Ratings",
+        #     partition_key=dynamodb.Attribute(name="username", type=dynamodb.AttributeType.STRING),
+        #     sort_key=dynamodb.Attribute(name="contentId", type=dynamodb.AttributeType.STRING),
+        #     removal_policy=RemovalPolicy.DESTROY
+        # )
+        # 1. Tabela za ocene
+
         table_ratings = dynamodb.Table(
             self, "Ratings",
             partition_key=dynamodb.Attribute(name="contentId", type=dynamodb.AttributeType.STRING),
@@ -118,6 +158,13 @@ class BackendStack(Stack):
             partition_key=dynamodb.Attribute(name="username", type=dynamodb.AttributeType.STRING),
             sort_key=dynamodb.Attribute(name="contentId", type=dynamodb.AttributeType.STRING),
             removal_policy=RemovalPolicy.DESTROY
+        )
+
+        table_feed_cache.add_global_secondary_index(
+            index_name="by-content-id",
+            partition_key=dynamodb.Attribute(name="contentId", type=dynamodb.AttributeType.STRING),
+            sort_key=dynamodb.Attribute(name="username", type=dynamodb.AttributeType.STRING),
+            projection_type=dynamodb.ProjectionType.KEYS_ONLY
         )
 
         table_artists = dynamodb.Table(
@@ -723,28 +770,33 @@ class BackendStack(Stack):
             self, "DeleteSingleLambda",
             function_name="DeleteSingleLambda",
             runtime=_lambda.Runtime.PYTHON_3_9,
-            handler="delete_single.handler", # Ovo će biti fajl backend/lambdas/content/delete_single.py
+            handler="delete_single.handler",
             code=_lambda.Code.from_asset("backend/lambdas/content"),
-            timeout= Duration.seconds(10), # dodati import cdk gore ako nije
+            timeout= Duration.seconds(10),
             environment={
                 "SINGLES_TABLE": table_singles.table_name,
                 "AUDIO_BUCKET": audio_bucket.bucket_name,
                 "IMAGES_BUCKET": images_bucket.bucket_name,
-                # Za kompleksno brisanje (brisati i iz indexa)
                 "GENRE_INDEX_TABLE": table_genre_index.table_name, 
                 "ARTIST_INDEX_TABLE": table_artist_index.table_name,
+                "FEED_CACHE_TABLE": table_feed_cache.table_name
             }
         )
         
         # Dozvole za DynamoDB i S3
-        table_singles.grant_write_data(delete_single_lambda) # Dozvola za DELETE ITEM iz Singles
-        table_singles.grant_read_data(delete_single_lambda)
-        audio_bucket.grant_delete(delete_single_lambda)      # Dozvola za s3:DeleteObject iz audio bucketa
-        images_bucket.grant_delete(delete_single_lambda)     # Dozvola za s3:DeleteObject iz image bucketa
-
-        # Dozvole za brisanje iz filter indexa (GenreIndex i ArtistIndex)
+        table_singles.grant_read_write_data(delete_single_lambda)
+        audio_bucket.grant_delete(delete_single_lambda)
+        images_bucket.grant_delete(delete_single_lambda)
         table_genre_index.grant_write_data(delete_single_lambda)
         table_artist_index.grant_write_data(delete_single_lambda)
+
+        table_feed_cache.grant_read_write_data(delete_single_lambda)
+        delete_single_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["dynamodb:Query"],
+                resources=[f"{table_feed_cache.table_arn}/index/by-content-id"] 
+            )
+        )
         
         # Kreiranje podresursa /singles/{singleId}
         single_id_resource = singles.add_resource("{singleId}",
@@ -770,12 +822,15 @@ class BackendStack(Stack):
             code=_lambda.Code.from_asset("backend/lambdas/content"),
             timeout=Duration.seconds(30), # Duže vreme, jer radi kaskadno brisanje
             environment={
-                "ALBUMS_TABLE": table_albums.table_name,
+                "ALBUM_TABLE": table_albums.table_name,
                 "SINGLES_TABLE": table_singles.table_name, # Potrebno za brisanje singlova
                 "AUDIO_BUCKET": audio_bucket.bucket_name,
                 "IMAGES_BUCKET": images_bucket.bucket_name,
                 "GENRE_INDEX_TABLE": table_genre_index.table_name,
                 "ARTIST_INDEX_TABLE": table_artist_index.table_name,
+                "FEED_CACHE_TABLE": table_feed_cache.table_name,
+                "SINGLES_GSI": "by-album-id",
+                "FEED_CACHE_GSI": "by-content-id"
             }
         )
 
@@ -791,7 +846,7 @@ class BackendStack(Stack):
         delete_album_lambda.add_to_role_policy(
             iam.PolicyStatement(
                 actions=["dynamodb:Query"],
-                resources=[f"{table_singles.table_arn}/index/*"] # Dozvola za query na svim indeksima
+                resources=[f"{table_singles.table_arn}/index/*"] 
             )
         )
 
@@ -807,6 +862,14 @@ class BackendStack(Stack):
                 allow_methods=["GET", "DELETE", "OPTIONS"],
                 allow_headers=["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key"]
             ))
+        
+        table_feed_cache.grant_read_write_data(delete_album_lambda)
+        delete_album_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["dynamodb:Query"],
+                resources=[f"{table_feed_cache.table_arn}/index/by-content-id"] 
+            )
+        )
 
         # Povezivanje DELETE metode na /albums/{albumId} sa DeleteAlbumLambda
         album_id_resource.add_method(
@@ -826,12 +889,13 @@ class BackendStack(Stack):
             timeout=Duration.seconds(45), # Još duže vreme zbog višestrukog kaskadnog brisanja
             environment={
                 "ARTISTS_TABLE": table_artists.table_name,
-                "ALBUMS_TABLE": table_albums.table_name,
-                "SINGLES_TABLE": table_singles.table_name,
-                "AUDIO_BUCKET": audio_bucket.bucket_name,
                 "IMAGES_BUCKET": images_bucket.bucket_name,
                 "GENRE_INDEX_TABLE": table_genre_index.table_name,
                 "ARTIST_INDEX_TABLE": table_artist_index.table_name,
+                "SUBSCRIPTIONS_TABLE": table_subscriptions.table_name,
+                "SUBSCRIPTIONS_GSI_NAME": "by-target-id",
+                "FEED_CACHE_TABLE": table_feed_cache.table_name,
+                "FEED_CACHE_GSI": "by-content-id"
             }
         )
 
@@ -840,34 +904,27 @@ class BackendStack(Stack):
         # A. Dozvole za ARTISTS tabelu (Read/Write)
         table_artists.grant_read_data(delete_artist_lambda)
         table_artists.grant_write_data(delete_artist_lambda)
-        
-        # B. Dozvole za ALBUMS tabelu (Read/Query i Write/Delete)
-        table_albums.grant_read_data(delete_artist_lambda)
-        table_albums.grant_write_data(delete_artist_lambda)
-        # Query na Albums GSI (za albume tog umetnika)
-        delete_artist_lambda.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=["dynamodb:Query"],
-                resources=[f"{table_albums.table_arn}/index/*"] 
-            )
-        )
-        
-        # C. Dozvole za SINGLES tabelu (Read/Query i Write/Delete)
-        table_singles.grant_read_data(delete_artist_lambda) 
-        table_singles.grant_write_data(delete_artist_lambda)
-        # Query na Singles GSI (za singlove tog umetnika)
-        delete_artist_lambda.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=["dynamodb:Query"],
-                resources=[f"{table_singles.table_arn}/index/*"] 
-            )
-        )
 
         # D. Dozvole za S3, Indekse
         images_bucket.grant_delete(delete_artist_lambda)
         audio_bucket.grant_delete(delete_artist_lambda)
         table_genre_index.grant_write_data(delete_artist_lambda)
         table_artist_index.grant_write_data(delete_artist_lambda)
+        artist_bucket.grant_delete(delete_artist_lambda)
+        table_feed_cache.grant_read_write_data(delete_artist_lambda)
+        delete_artist_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["dynamodb:Query"],
+                resources=[f"{table_feed_cache.table_arn}/index/by-content-id"]
+            )
+        )
+        table_subscriptions.grant_read_write_data(delete_artist_lambda)
+        delete_artist_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["dynamodb:Query"],
+                resources=[f"{table_subscriptions.table_arn}/index/by-target-id"]
+            )
+        )
         
         artist_id_resource = artists.add_resource("{artistId}",
             default_cors_preflight_options=apigw.CorsOptions(
@@ -899,6 +956,7 @@ class BackendStack(Stack):
                 "FILTER_ADD_LAMBDA": filter_add_lambda.function_name,
                 "NEW_CONTENT_TOPIC_ARN": new_content_topic.topic_arn,
                 "QUEUE_URL": update_feed_added_content_queue.queue_url,
+                "CONVERT_QUEUE_URL": conversion_queue.queue_url,
             },
             #log_retention=logs.RetentionDays.ONE_WEEK
         )
@@ -919,6 +977,7 @@ class BackendStack(Stack):
                 "FILTER_ADD_LAMBDA": filter_add_lambda.function_name,
                 "NEW_CONTENT_TOPIC_ARN": new_content_topic.topic_arn,
                 "QUEUE_URL": update_feed_added_content_queue.queue_url,
+                "CONVERT_QUEUE_URL": conversion_queue.queue_url,
             },
             #log_retention=logs.RetentionDays.ONE_WEEK
         )
@@ -1272,6 +1331,51 @@ class BackendStack(Stack):
 
         update_feed_specific_user_lambda.add_event_source(
             lambda_event_sources.SqsEventSource(update_feed_specific_user_queue)
+        )
+
+        convert_lambda = _lambda.Function(
+            self, "ConvertLambda",
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            handler="convert_to_wav.handler",
+            code=_lambda.Code.from_asset("backend/lambdas/transcribe"),
+            memory_size=2048,
+            timeout=Duration.minutes(5),
+            layers=[ffmpeg_layer],
+            environment={
+                "OUTPUT_PREFIX": "wav/",
+                "TRANSCRIBE_QUEUE_URL": transcription_queue.queue_url,
+            }
+        )
+        audio_bucket.grant_read_write(convert_lambda)
+
+        transcribe_lambda = _lambda.Function(
+            self, "TranscribeLambda",
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            handler="transcribe.handler",
+            code=_lambda.Code.from_asset("backend/lambdas/transcribe"),
+            memory_size=2048,
+            timeout=Duration.minutes(5),
+            layers=[vosk_layer],
+            environment={
+                "TRANSCRIPTION_TABLE": table_transcriptions.table_name,
+            }
+        )
+        audio_bucket.grant_read_write(transcribe_lambda)
+        table_transcriptions.grant_write_data(transcribe_lambda)
+
+        transcription_queue.grant_consume_messages(transcribe_lambda)
+        transcription_queue.grant_send_messages(convert_lambda)
+
+        conversion_queue.grant_consume_messages(convert_lambda)
+        conversion_queue.grant_send_messages(create_single_lambda)
+        conversion_queue.grant_send_messages(create_album_lambda)
+
+        transcribe_lambda.add_event_source(
+            lambda_event_sources.SqsEventSource(transcription_queue)
+        )
+
+        convert_lambda.add_event_source(
+            lambda_event_sources.SqsEventSource(conversion_queue)
         )
 
 

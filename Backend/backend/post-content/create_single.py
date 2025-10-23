@@ -10,6 +10,7 @@ SINGLES_TABLE = os.environ["SINGLES_TABLE"]
 FILTER_ADD_LAMBDA = os.environ["FILTER_ADD_LAMBDA"]
 NEW_CONTENT_TOPIC_ARN = os.environ["NEW_CONTENT_TOPIC_ARN"]
 queue_url = os.environ["QUEUE_URL"]
+convert_queue_url = os.environ["CONVERT_QUEUE_URL"]
 
 def cors():
     return {
@@ -118,6 +119,16 @@ def handler(event, _):
             MessageBody=json.dumps(payload_feed)
         )
 
+        payload_convert = {
+            "bucket": os.environ["AUDIO_BUCKET"],
+            "key": audioKey,
+            "singleId": singleId
+        }
+        sqs_client.send_message(
+            QueueUrl=convert_queue_url,
+            MessageBody=json.dumps(payload_convert)
+        )
+        
         try:
             sns_message = {
                 'contentType': 'single',

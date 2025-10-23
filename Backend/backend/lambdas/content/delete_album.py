@@ -1,160 +1,219 @@
-import json
 import os
+import json
 import boto3
-from boto3.dynamodb.conditions import Attr, Key
+from boto3.dynamodb.conditions import Key
 
-# Inicijalizacija AWS klijenata
-dynamodb = boto3.resource('dynamodb')
-s3 = boto3.client('s3')
+s3 = boto3.client("s3")
+dynamodb = boto3.resource("dynamodb")
 
-# Dobijanje imena resursa iz environment varijabli (postavljenih u CDK-u)
-ALBUMS_TABLE_NAME = os.environ['ALBUMS_TABLE']
-SINGLES_TABLE_NAME = os.environ['SINGLES_TABLE']
-IMAGES_BUCKET_NAME = os.environ['IMAGES_BUCKET']
-AUDIO_BUCKET_NAME = os.environ['AUDIO_BUCKET']
-GENRE_INDEX_TABLE_NAME = os.environ['GENRE_INDEX_TABLE']
-ARTIST_INDEX_TABLE_NAME = os.environ['ARTIST_INDEX_TABLE']
+ALBUM_TABLE_NAME = os.environ["ALBUM_TABLE"]
+SINGLES_TABLE_NAME = os.environ["SINGLES_TABLE"]
+GENRE_INDEX_TABLE_NAME = os.environ["GENRE_INDEX_TABLE"]
+ARTIST_INDEX_TABLE_NAME = os.environ["ARTIST_INDEX_TABLE"]
+FEED_CACHE_TABLE_NAME = os.environ["FEED_CACHE_TABLE"]
 
-albums_table = dynamodb.Table(ALBUMS_TABLE_NAME)
+AUDIO_BUCKET = os.environ["AUDIO_BUCKET"]
+IMAGES_BUCKET = os.environ["IMAGES_BUCKET"]
+
+ALBUM_GSI_NAME = "AlbumIdIndexV2"
+SINGLES_GSI_NAME = os.environ["SINGLES_GSI"] 
+FEED_CACHE_GSI = os.environ.get("FEED_CACHE_GSI", "by-content-id")
+
+albums_table = dynamodb.Table(ALBUM_TABLE_NAME)
 singles_table = dynamodb.Table(SINGLES_TABLE_NAME)
 genre_index_table = dynamodb.Table(GENRE_INDEX_TABLE_NAME)
 artist_index_table = dynamodb.Table(ARTIST_INDEX_TABLE_NAME)
+feed_cache_table = dynamodb.Table(FEED_CACHE_TABLE_NAME)
 
 
-def cors_headers():
-    """Definiše kompletne CORS headere za sve odgovore."""
+def cors():
     return {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
-        "Access-Control-Allow-Methods": "OPTIONS,GET,PUT,POST,DELETE",
-        "Content-Type": "application/json"
+        "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token",
+        "Access-Control-Allow-Methods": "OPTIONS,GET,PUT,POST,DELETE"
     }
 
-def delete_from_index(table, partition_key_value, sort_key_value, partition_key_name, sort_key_name):
-    """Generička funkcija za brisanje iz DynamoDB index tabela."""
+def delete_s3_object_from_url(key_url):
+    if not key_url or not key_url.startswith("https://"): return None
     try:
-        table.delete_item(
-            Key={
-                partition_key_name: partition_key_value,
-                sort_key_name: sort_key_value
-            }
-        )
+        parts = key_url.replace("https://", "").split(".s3.amazonaws.com/")
+        if len(parts) != 2: return None
+        bucket_name, object_key = parts[0], parts[1]
+        
+        if bucket_name != AUDIO_BUCKET and bucket_name != IMAGES_BUCKET:
+            print(f"Skipping deletion, bucket {bucket_name} not recognized.")
+            return None
+            
+        print(f"Deleting s3://{bucket_name}/{object_key}")
+        s3.delete_object(Bucket=bucket_name, Key=object_key)
+        return object_key
     except Exception as e:
-        print(f"Error deleting from index {table.name}: {e}")
-        # Ne zaustavljamo se zbog greške u indeksu
+        print(f"Failed to delete S3 object {key_url}: {str(e)}")
+        return None
+
+def delete_index_entries(content_key, genres, artist_ids):
+    try:
+        with genre_index_table.batch_writer() as batch:
+            for genre_name in genres:
+                batch.delete_item(Key={'genreName': genre_name, 'contentKey': content_key})
+        print(f"Deleted entries for {content_key} from GenreIndex.")
+    except Exception as e:
+        print(f"Error deleting from GenreIndex for {content_key}: {e}")
+
+    try:
+        with artist_index_table.batch_writer() as batch:
+            for artist_id in artist_ids:
+                batch.delete_item(Key={'artistId': artist_id, 'contentKey': content_key})
+        print(f"Deleted entries for {content_key} from ArtistIndex.")
+    except Exception as e:
+        print(f"Error deleting from ArtistIndex for {content_key}: {e}")
+
+def delete_from_feed_cache(content_id):
+    deleted_count = 0
+    try:
+        query_kwargs = {
+            'IndexName': FEED_CACHE_GSI,
+            'KeyConditionExpression': Key('contentId').eq(content_id),
+            'ProjectionExpression': 'username, contentId' 
+        }
+        items_to_delete = []
+        
+        while True:
+            response = feed_cache_table.query(**query_kwargs)
+            items_to_delete.extend(response.get('Items', []))
+            if 'LastEvaluatedKey' not in response:
+                break
+            query_kwargs['ExclusiveStartKey'] = response['LastEvaluatedKey']
+
+        if not items_to_delete:
+            print(f"No items found in FeedCache for contentId {content_id}")
+            return
+
+        print(f"Found {len(items_to_delete)} items in FeedCache to delete for contentId {content_id}")
+        
+        with feed_cache_table.batch_writer() as batch:
+            for item in items_to_delete:
+                batch.delete_item(Key={'username': item['username'], 'contentId': item['contentId']})
+                deleted_count += 1
+        print(f"Deleted {deleted_count} items from FeedCache for {content_id}")
+        
+    except Exception as e:
+        print(f"Error deleting items from FeedCache for {content_id}: {str(e)}")
 
 def handler(event, context):
-    album_id = event.get('pathParameters', {}).get('albumId')
-
-    # Provera Admin uloge (kao i ranije)
     try:
-        user_role = event['requestContext']['authorizer']['claims']['custom:role']
-        if user_role != 'Admin':
-            return {'statusCode': 403, 'body': json.dumps({'message': 'Forbidden'}), 'headers': cors_headers()}
-    except KeyError:
-        return {'statusCode': 403, 'body': json.dumps({'message': 'Forbidden'}), 'headers': cors_headers()}
+        claims = (event.get("requestContext", {}) or {}).get("authorizer", {}).get("claims", {}) or {}
+        if claims.get("custom:role") != "Admin":
+            return {"statusCode": 403, "headers": cors(), "body": json.dumps({"error": "forbidden"})}
 
-    if not album_id:
-        return {'statusCode': 400, 'body': json.dumps({'message': 'Missing albumId'}), 'headers': cors_headers()}
+        path_params = event.get("pathParameters", {})
+        album_id_to_delete = path_params.get("albumId")
 
-    # KORAK 1: Dohvatanje albuma i svih singlova vezanih za album
-    try:
-        album_scan_response = albums_table.scan(
-            FilterExpression=Attr('albumId').eq(album_id),
-            Limit=1
-        )
-        album_item = album_scan_response.get('Items', [])
-        
-        if not album_item:
-            # Vraćamo 204 ako album ne postoji (idiempotentnost)
-            return {'statusCode': 204, 'body': '', 'headers': cors_headers()}
+        if not album_id_to_delete:
+            return {"statusCode": 400, "headers": cors(), "body": json.dumps({"error": "albumId is required in path"})}
 
-        # Album je pronađen. Izvuci ključeve i podatke.
-        album_data = album_item[0]
-        artist_id = album_data.get('artistId') # <--- NOVI PK ZA ALBUM
-        album_image_key = album_data.get('coverKey') # Ime atributa je 'coverKey', a ne 'imageKey' (provereno iz create_album.py)
-        
-        if not artist_id:
-             raise Exception("Album found but missing required artistId (Partition Key).")
+        print(f"--- START: Deleting album {album_id_to_delete} (without touching ratings) ---")
 
-        # B. Dohvatanje SVIH singlova koji pripadaju albumu (pretpostavka: AlbumIndex postoji)
-        # OVO OSTAVLJAMO JER KOD VEĆ KORISTI GSI, ŠTO JE EFIKASNO
-        singles_response = singles_table.query(
-            IndexName='by-album-id', # <-- ISPRAVKA
-            KeyConditionExpression=Key('albumId').eq(album_id)
-        )
-        songs_to_delete = singles_response.get('Items', [])
-        
-    except Exception as e:
-        print(f"Error fetching album or singles: {e}")
-        return {'statusCode': 500, 'body': json.dumps({'message': 'Internal Server Error while reading data.'}), 'headers': cors_headers()}
-
-
-    # KORAK 2: Kaskadno brisanje Singlova (i njihovih resursa)
-    for song in songs_to_delete:
-        single_id = song.get('singleId')
-        audio_key = song.get('audioKey')
-        single_artist_id = song.get('artistId')
-        genres = song.get('genres', [])
-        artist_ids = song.get('artistIds', [])
-        content_key = f"single#{single_id}"
-
-        # 2a. Brisanje iz Singles tabele
+        album_item = None
+        artist_id_pk = None
         try:
-            singles_table.delete_item(
-                Key={
-                    'artistId': single_artist_id, # <--- PK singla
-                    'singleId': single_id         # <--- SK singla
-                }
+            response = albums_table.query(
+                IndexName=ALBUM_GSI_NAME,
+                KeyConditionExpression=Key('albumId').eq(album_id_to_delete)
             )
+            items = response.get('Items', [])
+            if not items:
+                print("Album not found via GSI.")
+                return {"statusCode": 404, "headers": cors(), "body": json.dumps({"error": "Album not found"})}
+            
+            album_item = items[0]
+            artist_id_pk = album_item.get('artistId') 
+            if not artist_id_pk:
+                return {"statusCode": 500, "headers": cors(), "body": json.dumps({"error": "Internal error: Missing primary key data for album"})}
+            
+            print(f"Album details fetched via GSI. artistId={artist_id_pk}")
+
         except Exception as e:
-            print(f"Error deleting single {single_id}: {e}")
+            print(f"Error finding album via GSI: {str(e)}")
+            return {"statusCode": 500, "headers": cors(), "body": json.dumps({"error": "Failed to find album details"})}
 
-        # 2b. Brisanje iz Index tabela (GenreIndex, ArtistIndex)
-        for genre_name in genres:
-            delete_from_index(genre_index_table, genre_name, content_key, 'genreName', 'contentKey')
-        for artist_id in artist_ids:
-            delete_from_index(artist_index_table, artist_id, content_key, 'artistId', 'contentKey')
+        deleted_s3_keys = []
 
-        # 2c. Brisanje audio fajla iz S3
-        if audio_key:
-            try:
-                s3.delete_object(Bucket=AUDIO_BUCKET_NAME, Key=audio_key)
-            except Exception as e:
-                print(f"Error deleting audio file {audio_key}: {e}")
-
-        # NAPOMENA: Preskačemo brisanje imageKey singlova jer su verovatno svi isti kao album imageKey.
-        # Ako svaki singl ima svoju sliku, ovde treba dodati brisanje song.get('imageKey').
-        # U ovom rešenju pretpostavljamo da je imageKey singla isti kao imageKey albuma.
-
-    
-    # KORAK 3: Brisanje Albuma
-    try:
-        # 3a. Brisanje iz Albums tabele
-        albums_table.delete_item(
-            Key={
-                'artistId': artist_id, # <--- PK albuma
-                'albumId': album_id    # <--- SK albuma
+        print(f"Finding associated songs for album {album_id_to_delete}...")
+        songs_to_delete = []
+        try:
+            query_kwargs = {
+                'IndexName': SINGLES_GSI_NAME,
+                'KeyConditionExpression': Key('albumId').eq(album_id_to_delete)
             }
-        )
+            while True:
+                response = singles_table.query(**query_kwargs)
+                songs_to_delete.extend(response.get('Items', []))
+                if 'LastEvaluatedKey' not in response:
+                    break
+                query_kwargs['ExclusiveStartKey'] = response['LastEvaluatedKey']
+            
+            print(f"Found {len(songs_to_delete)} songs to delete.")
+
+        except Exception as e:
+            print(f"Error finding associated songs: {str(e)}")
+            
+        for song in songs_to_delete:
+            try:
+                song_id = song.get('singleId')
+                song_artist_pk = song.get('artistId')
+                
+                if not song_id or not song_artist_pk:
+                    print(f"Skipping song, missing keys: {song}")
+                    continue
+
+                print(f"Deleting song: {song_id} (artist: {song_artist_pk})")
+                
+                deleted_s3_keys.append(delete_s3_object_from_url(song.get('audioKey')))
+                deleted_s3_keys.append(delete_s3_object_from_url(song.get('imageKey')))
+
+                song_content_key = f"single-{song_id}"
+                song_genres = list(song.get('genres', set()))
+                song_artist_ids = list(song.get('artistIds', set()))
+                delete_index_entries(song_content_key, song_genres, song_artist_ids)
+
+                delete_from_feed_cache(song_id)
+                
+                singles_table.delete_item(
+                    Key={'artistId': song_artist_pk, 'singleId': song_id}
+                )
+                print(f"Successfully deleted song {song_id} from Singles table.")
+
+            except Exception as e:
+                print(f"Error during deletion of song {song.get('singleId')}: {str(e)}")
         
-        # 3b. Brisanje slike albuma iz S3
-        if album_image_key:
-            s3.delete_object(Bucket=IMAGES_BUCKET_NAME, Key=album_image_key)
-        
+        print(f"--- Finished deleting songs. Now deleting album {album_id_to_delete} ---")
+
+        album_image_key_url = album_item.get('imageKey')
+        deleted_s3_keys.append(delete_s3_object_from_url(album_image_key_url))
+
+        album_content_key = f"album-{album_id_to_delete}" 
+        album_genres = list(album_item.get('genres', set()))
+        album_artist_ids = list(album_item.get('artistIds', set()))
+        delete_index_entries(album_content_key, album_genres, album_artist_ids)
+
+        delete_from_feed_cache(album_id_to_delete)
+
+        try:
+            albums_table.delete_item(
+                Key={'artistId': artist_id_pk, 'albumId': album_id_to_delete}
+            )
+            print("Deleted item from Albums table.")
+        except Exception as e:
+             print(f"Error deleting from Albums table: {str(e)}")
+             return {"statusCode": 500, "headers": cors(), "body": json.dumps({"error": "Failed to delete album from main table"})}
+
+        final_deleted_keys = [key for key in deleted_s3_keys if key]
+        return {"statusCode": 200, "headers": cors(), "body": json.dumps({
+            "message": f"Album {album_id_to_delete} and its {len(songs_to_delete)} songs deleted successfully",
+            "deletedS3Keys": final_deleted_keys
+            })}
+
     except Exception as e:
-        print(f"Fatal error deleting album {album_id}: {e}")
-        # Vraćamo 500 ako glavno brisanje albuma ne uspe
-        return {'statusCode': 500, 'body': json.dumps({'message': 'Internal Server Error during final album deletion.'}), 'headers': cors_headers()}
-
-
-    # KORAK 4: Uspešan odgovor
-    return {
-        'statusCode': 204,
-        'body': '',
-        'headers': {
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
-            "Access-Control-Allow-Methods": "OPTIONS,GET,PUT,POST,DELETE"
-        }
-    }
+        print(f"Unhandled error: {str(e)}")
+        return {"statusCode": 500, "headers": cors(), "body": json.dumps({"error": str(e)})}
