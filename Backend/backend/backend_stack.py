@@ -199,7 +199,11 @@ class BackendStack(Stack):
             partition_key=dynamodb.Attribute(name="singleId", type=dynamodb.AttributeType.STRING),
             projection_type=dynamodb.ProjectionType.ALL
         )
-        
+        table_albums.add_global_secondary_index(
+            index_name="AlbumIdIndex", 
+            partition_key=dynamodb.Attribute(name="albumId", type=dynamodb.AttributeType.STRING),
+            projection_type=dynamodb.ProjectionType.ALL  
+        )
         table_singles.add_global_secondary_index(
             index_name="by-album-id",
             partition_key=dynamodb.Attribute(name="albumId", type=dynamodb.AttributeType.STRING),
@@ -822,12 +826,15 @@ class BackendStack(Stack):
             code=_lambda.Code.from_asset("backend/lambdas/content"),
             timeout=Duration.seconds(30), # Duže vreme, jer radi kaskadno brisanje
             environment={
-                "ALBUMS_TABLE": table_albums.table_name,
+                "ALBUM_TABLE": table_albums.table_name,
                 "SINGLES_TABLE": table_singles.table_name, # Potrebno za brisanje singlova
                 "AUDIO_BUCKET": audio_bucket.bucket_name,
                 "IMAGES_BUCKET": images_bucket.bucket_name,
                 "GENRE_INDEX_TABLE": table_genre_index.table_name,
-                "ARTIST_INDEX_TABLE": table_artist_index.table_name
+                "ARTIST_INDEX_TABLE": table_artist_index.table_name,
+                "FEED_CACHE_TABLE": table_feed_cache.table_name,
+                "SINGLES_GSI": "by-album-id",
+                "FEED_CACHE_GSI": "by-content-id"
             }
         )
 
@@ -843,7 +850,7 @@ class BackendStack(Stack):
         delete_album_lambda.add_to_role_policy(
             iam.PolicyStatement(
                 actions=["dynamodb:Query"],
-                resources=[f"{table_singles.table_arn}/index/*"] # Dozvola za query na svim indeksima
+                resources=[f"{table_singles.table_arn}/index/*"] 
             )
         )
 
@@ -856,9 +863,17 @@ class BackendStack(Stack):
         album_id_resource = albums.add_resource("{albumId}",
             default_cors_preflight_options=apigw.CorsOptions(
                 allow_origins=apigw.Cors.ALL_ORIGINS,
-                allow_methods=["GET", "DELETE", "OPTIONS"],
+                allow_methods=["GET", "PUT", "DELETE", "OPTIONS"],
                 allow_headers=["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key"]
             ))
+        
+        table_feed_cache.grant_read_write_data(delete_album_lambda)
+        delete_album_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["dynamodb:Query"],
+                resources=[f"{table_feed_cache.table_arn}/index/by-content-id"] 
+            )
+        )
 
         # Povezivanje DELETE metode na /albums/{albumId} sa DeleteAlbumLambda
         album_id_resource.add_method(
@@ -867,6 +882,7 @@ class BackendStack(Stack):
             authorization_type=apigw.AuthorizationType.COGNITO,
             authorizer=authorizer
         )
+        
         
         # 1. Definicija Lambda funkcije za brisanje umetnika
         delete_artist_lambda = _lambda.Function(
@@ -878,12 +894,13 @@ class BackendStack(Stack):
             timeout=Duration.seconds(45), # Još duže vreme zbog višestrukog kaskadnog brisanja
             environment={
                 "ARTISTS_TABLE": table_artists.table_name,
-                "ALBUMS_TABLE": table_albums.table_name,
-                "SINGLES_TABLE": table_singles.table_name,
-                "AUDIO_BUCKET": audio_bucket.bucket_name,
                 "IMAGES_BUCKET": images_bucket.bucket_name,
                 "GENRE_INDEX_TABLE": table_genre_index.table_name,
                 "ARTIST_INDEX_TABLE": table_artist_index.table_name,
+                "SUBSCRIPTIONS_TABLE": table_subscriptions.table_name,
+                "SUBSCRIPTIONS_GSI_NAME": "by-target-id",
+                "FEED_CACHE_TABLE": table_feed_cache.table_name,
+                "FEED_CACHE_GSI": "by-content-id"
             }
         )
 
@@ -892,34 +909,27 @@ class BackendStack(Stack):
         # A. Dozvole za ARTISTS tabelu (Read/Write)
         table_artists.grant_read_data(delete_artist_lambda)
         table_artists.grant_write_data(delete_artist_lambda)
-        
-        # B. Dozvole za ALBUMS tabelu (Read/Query i Write/Delete)
-        table_albums.grant_read_data(delete_artist_lambda)
-        table_albums.grant_write_data(delete_artist_lambda)
-        # Query na Albums GSI (za albume tog umetnika)
-        delete_artist_lambda.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=["dynamodb:Query"],
-                resources=[f"{table_albums.table_arn}/index/*"] 
-            )
-        )
-        
-        # C. Dozvole za SINGLES tabelu (Read/Query i Write/Delete)
-        table_singles.grant_read_data(delete_artist_lambda) 
-        table_singles.grant_write_data(delete_artist_lambda)
-        # Query na Singles GSI (za singlove tog umetnika)
-        delete_artist_lambda.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=["dynamodb:Query"],
-                resources=[f"{table_singles.table_arn}/index/*"] 
-            )
-        )
 
         # D. Dozvole za S3, Indekse
         images_bucket.grant_delete(delete_artist_lambda)
         audio_bucket.grant_delete(delete_artist_lambda)
         table_genre_index.grant_write_data(delete_artist_lambda)
         table_artist_index.grant_write_data(delete_artist_lambda)
+        artist_bucket.grant_delete(delete_artist_lambda)
+        table_feed_cache.grant_read_write_data(delete_artist_lambda)
+        delete_artist_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["dynamodb:Query"],
+                resources=[f"{table_feed_cache.table_arn}/index/by-content-id"]
+            )
+        )
+        table_subscriptions.grant_read_write_data(delete_artist_lambda)
+        delete_artist_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["dynamodb:Query"],
+                resources=[f"{table_subscriptions.table_arn}/index/by-target-id"]
+            )
+        )
         
         artist_id_resource = artists.add_resource("{artistId}",
             default_cors_preflight_options=apigw.CorsOptions(
@@ -1024,20 +1034,32 @@ class BackendStack(Stack):
         update_album_lambda = _lambda.Function(
             self, "UpdateAlbumLambda",
             runtime=_lambda.Runtime.PYTHON_3_9,
-            # Koristimo handler tvoje funkcije: 'update_album_metadata_cover.handler'
-            handler="update_album.handler", 
-            code=_lambda.Code.from_asset("backend/lambdas/content"),
+            handler="update_album.handler", # <-- REFERENCA NA NOVI FAJL
+            code=_lambda.Code.from_asset("backend/lambdas/content"), 
             timeout=Duration.seconds(30),
-            memory_size=512,
             environment={
-                "ALBUMS_TABLE": table_albums.table_name,
-                "IMAGES_BUCKET": images_bucket.bucket_name,
-                "FILTER_UPDATE_LAMBDA": update_filter_lambda.function_name, ## DA LI SE KORISTI ISTA
-                # Dodaj ostale ENV varijable koje koristi tvoja Lambda (npr. NEW_CONTENT_TOPIC_ARN)
+                "ALBUMS_TABLE": table_albums.table_name, # <-- NOVO
+                "ALBUM_ID_INDEX": "AlbumIdIndex", # <-- NOVO (Pretpostavljam da je ovo ime GSI)
+                "IMAGE_BUCKET": images_bucket.bucket_name,
+                "UPDATE_FILTER_LAMBDA": update_filter_lambda.function_name, 
+                "FEED_UPDATE_QUEUE_URL": update_feed_added_content_queue.queue_url, 
+                "NEW_CONTENT_TOPIC_ARN": new_content_topic.topic_arn, 
             }
         )
+
+        album_id_resource.add_method(
+            "PUT", 
+            apigw.LambdaIntegration(update_album_lambda),
+            authorization_type=apigw.AuthorizationType.COGNITO,
+            authorizer=authorizer
+        )
+        
+        # B. Dodelite Dozvole
         table_albums.grant_read_write_data(update_album_lambda)
-        images_bucket.grant_read_write(update_album_lambda)
+        images_bucket.grant_delete(update_album_lambda)
+        update_filter_lambda.grant_invoke(update_album_lambda)
+        update_feed_added_content_queue.grant_send_messages(update_album_lambda)
+        new_content_topic.grant_publish(update_album_lambda)
         
         # 3. Dodavanje API Gateway rute za PUT /singles/{singleId}
         
@@ -1048,13 +1070,6 @@ class BackendStack(Stack):
             authorization_type=apigw.AuthorizationType.COGNITO,
             authorizer=authorizer
         )    
-        album_id_resource.add_method(
-            "PUT",
-            apigw.LambdaIntegration(update_album_lambda),
-            authorization_type=apigw.AuthorizationType.COGNITO,
-            authorizer=authorizer
-            # authorizer=self.user_pool_authorizer # Ako već imaš definisan Authorizer
-        )
         
         albums.add_method(
             "POST",

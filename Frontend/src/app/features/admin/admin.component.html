@@ -35,7 +35,7 @@
           </tbody>
         </table>
       </div>
-
+      <br>
       <!-- Cover image upload -->
       <h3>Cover Image</h3>
       <div class="dropzone" (dragover)="onDragOver($event)" (drop)="onCoverDrop($event)">
@@ -43,13 +43,29 @@
         <button mat-stroked-button color="accent" (click)="coverInput.click()">Browse image</button>
         <input #coverInput type="file" accept="image/*" (change)="onCoverSelected($event)" hidden>
       </div>
-
+      
       <!-- Cover preview -->
       <div *ngIf="coverPreview" class="cover-preview">
         <img [src]="coverPreview" alt="Cover preview">
         <button class="link" type="button" (click)="removeCover()">Remove</button>
       </div>
+      <br>
+
+      <h3>Single Images for your album</h3>
+      <div class="dropzone" (dragover)="onDragOver($event)" (drop)="onSingleAlbumCoverDrop($event)">
+        <p>Drag & drop cover image here, or</p>
+        <button mat-stroked-button color="accent" (click)="singleCoverInput.click()">Browse image</button>
+        <input #singleCoverInput type="file" accept="image/*" (change)="onSingleCoverSelected($event)" hidden>
+      </div>
+
+      <!-- Cover preview -->
+      <div *ngIf="singleCoverPreview" class="cover-preview">
+        <img [src]="singleCoverPreview" alt="Cover preview">
+        <button class="link" type="button" (click)="removeSingleCover()">Remove</button>
+      </div>
+      
     </div>
+    
 
     <!-- RIGHT: Metadata section -->
     <div class="col">

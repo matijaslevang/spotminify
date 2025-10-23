@@ -22,6 +22,7 @@ import { UpdateArtistComponent } from './artist/update-artist/update-artist.comp
 import { UpdateSongComponent } from './song/update-song/update-song.component';
 import { MatDialogModule } from '@angular/material/dialog';
 import { TranscriptDialogComponent } from './transcript-dialog/transcript-dialog.component';
+import { CardComponent } from './song/card/card.component';
 
 @NgModule({
   declarations: [
@@ -36,7 +37,8 @@ import { TranscriptDialogComponent } from './transcript-dialog/transcript-dialog
     UpdateAlbumComponent,
     UpdateArtistComponent,
     UpdateSongComponent,
-    TranscriptDialogComponent
+    TranscriptDialogComponent,
+    CardComponent
   ],
   exports: [
     SongCardComponent,

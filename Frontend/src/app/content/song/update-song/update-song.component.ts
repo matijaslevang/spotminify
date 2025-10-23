@@ -169,7 +169,7 @@ export class UpdateSongComponent implements OnInit{
        const selectedGenreIds = selectedGenreIdsWithNulls.filter(id => id !== null) as (number | string)[];
 
          // 4. Patchujemo formu sa nizom ID-eva
-    this.form.get('genres')?.patchValue(selectedGenreIds);
+      this.form.get('genres')?.patchValue(selectedGenreIds);
 
       console.log(this.availableGenres);
     },
