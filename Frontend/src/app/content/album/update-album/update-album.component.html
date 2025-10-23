@@ -34,7 +34,7 @@
     </div>
     <p *ngIf="cover" class="file-name">{{ cover.name }}</p>
     
-    <!-- <div class="songs-list-container">
+    <div class="songs-list-container">
         <h3>Songs in this Album ({{ albumSongs.length }})</h3>
 
         <div *ngIf="songsLoading" class="loading-indicator">
@@ -47,10 +47,10 @@
 
         <div *ngIf="!songsLoading && albumSongs.length > 0" class="songs-grid">
             <div *ngFor="let song of albumSongs">
-                <app-song-card [song]="song"></app-song-card>
+                <app-card [song]="song"></app-card>
             </div>
         </div>
-    </div> -->
+    </div> 
     <div class="actions">
       <button mat-stroked-button type="button" (click)="cancel()">Cancel</button>
       <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid">Save</button>

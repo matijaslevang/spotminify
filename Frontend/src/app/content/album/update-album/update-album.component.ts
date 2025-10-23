@@ -6,7 +6,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { Artist, Genre } from '../../models/model';
 import { UploadService } from '../../../features/upload.service'; // Dodajte import za UploadService
 import { firstValueFrom } from 'rxjs';
-import { Song } from '../../models/model';
+import { Song, Album } from '../../models/model';
 
 @Component({
   selector: 'app-update-album',
@@ -26,7 +26,7 @@ export class UpdateAlbumComponent implements OnInit {
   ngOnInit(): void {
     this.loadGenres();
     this.loadArtists();
-    this.loadAlbumSongs(this.data.album.id);
+    this.loadAlbumSongs(this.data.album.albumId);
   }
 
   constructor(
