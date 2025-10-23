@@ -146,6 +146,12 @@ class BackendStack(Stack):
             sort_key=dynamodb.Attribute(name="singleId", type=dynamodb.AttributeType.STRING),
             removal_policy=RemovalPolicy.DESTROY
         )
+        # ----------- NOV GSI ----------
+        table_singles.add_global_secondary_index(
+            index_name="SingleIdIndex",
+            partition_key=dynamodb.Attribute(name="singleId", type=dynamodb.AttributeType.STRING),
+            projection_type=dynamodb.ProjectionType.ALL
+        )
         
         table_singles.add_global_secondary_index(
             index_name="by-album-id",
@@ -744,7 +750,7 @@ class BackendStack(Stack):
         single_id_resource = singles.add_resource("{singleId}",
             default_cors_preflight_options=apigw.CorsOptions(
                 allow_origins=apigw.Cors.ALL_ORIGINS,
-                allow_methods=["GET", "DELETE", "OPTIONS"], # Definisanje dozvoljenih metoda na ovom resursu
+                allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"], # Definisanje dozvoljenih metoda na ovom resursu
                 allow_headers=["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key"]
             ))
 
@@ -918,7 +924,84 @@ class BackendStack(Stack):
         )
         filter_add_lambda.grant_invoke(create_single_lambda)
         new_content_topic.grant_publish(create_single_lambda)
-
+        # ------------ NOVO Definicija nove Lambda funkcije za ažuriranje filtera
+        
+        update_filter_lambda = _lambda.Function(
+            self, "UpdateFilterLambda",
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            handler="update_filter.handler",
+            code=_lambda.Code.from_asset("backend/lambdas/content"), 
+            timeout=Duration.seconds(30),
+            environment={
+                # OVDE MORAJU BITI CDK REFERENCE, NE os.environ
+                "GENRE_INDEX_TABLE": table_genre_index.table_name,
+                "ARTIST_INDEX_TABLE": table_artist_index.table_name,
+            }
+        )
+        # Potrebne dozvole za upis u index tabele
+        table_genre_index.grant_read_write_data(update_filter_lambda)
+        table_artist_index.grant_read_write_data(update_filter_lambda)
+        
+        # ------------ NOVO Definicija nove Lambde
+        update_single_lambda = _lambda.Function(
+            self, "UpdateSingleLambda",
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            handler="update_single.handler",
+            code=_lambda.Code.from_asset("backend/lambdas/content"), 
+            timeout=Duration.seconds(30),
+            environment={
+                "SINGLES_TABLE": table_singles.table_name,
+                "SINGLE_ID_INDEX": "SingleIdIndex", 
+                "AUDIO_BUCKET": audio_bucket.bucket_name,
+                "IMAGE_BUCKET": images_bucket.bucket_name,
+                "UPDATE_FILTER_LAMBDA": update_filter_lambda.function_name, 
+                "FEED_UPDATE_QUEUE_URL": update_feed_added_content_queue.queue_url, 
+                "NEW_CONTENT_TOPIC_ARN": new_content_topic.topic_arn, 
+            }
+        )
+        table_singles.grant_read_write_data(update_single_lambda) # Ispravljena referenca
+        audio_bucket.grant_delete(update_single_lambda) 
+        images_bucket.grant_delete(update_single_lambda) 
+        update_filter_lambda.grant_invoke(update_single_lambda) 
+        update_feed_added_content_queue.grant_send_messages(update_single_lambda)
+        new_content_topic.grant_publish(update_single_lambda)
+        
+        
+        update_album_lambda = _lambda.Function(
+            self, "UpdateAlbumLambda",
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            # Koristimo handler tvoje funkcije: 'update_album_metadata_cover.handler'
+            handler="update_album.handler", 
+            code=_lambda.Code.from_asset("backend/lambdas/content"),
+            timeout=Duration.seconds(30),
+            memory_size=512,
+            environment={
+                "ALBUMS_TABLE": table_albums.table_name,
+                "IMAGES_BUCKET": images_bucket.bucket_name,
+                "FILTER_UPDATE_LAMBDA": update_filter_lambda.function_name, ## DA LI SE KORISTI ISTA
+                # Dodaj ostale ENV varijable koje koristi tvoja Lambda (npr. NEW_CONTENT_TOPIC_ARN)
+            }
+        )
+        table_albums.grant_read_write_data(update_album_lambda)
+        images_bucket.grant_read_write(update_album_lambda)
+        
+        # 3. Dodavanje API Gateway rute za PUT /singles/{singleId}
+        
+        #single_id_resource = singles.add_resource("{singleId}")
+        single_id_resource.add_method(
+            "PUT",
+            apigw.LambdaIntegration(update_single_lambda),
+            authorization_type=apigw.AuthorizationType.COGNITO,
+            authorizer=authorizer
+        )    
+        album_id_resource.add_method(
+            "PUT",
+            apigw.LambdaIntegration(update_album_lambda),
+            authorization_type=apigw.AuthorizationType.COGNITO,
+            authorizer=authorizer
+            # authorizer=self.user_pool_authorizer # Ako već imaš definisan Authorizer
+        )
+        
         albums.add_method(
             "POST",
             apigw.LambdaIntegration(create_album_lambda),
