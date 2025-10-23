@@ -199,7 +199,11 @@ class BackendStack(Stack):
             partition_key=dynamodb.Attribute(name="singleId", type=dynamodb.AttributeType.STRING),
             projection_type=dynamodb.ProjectionType.ALL
         )
-        
+        table_albums.add_global_secondary_index(
+            index_name="AlbumIdIndex", 
+            partition_key=dynamodb.Attribute(name="albumId", type=dynamodb.AttributeType.STRING),
+            projection_type=dynamodb.ProjectionType.ALL  
+        )
         table_singles.add_global_secondary_index(
             index_name="by-album-id",
             partition_key=dynamodb.Attribute(name="albumId", type=dynamodb.AttributeType.STRING),
@@ -859,7 +863,7 @@ class BackendStack(Stack):
         album_id_resource = albums.add_resource("{albumId}",
             default_cors_preflight_options=apigw.CorsOptions(
                 allow_origins=apigw.Cors.ALL_ORIGINS,
-                allow_methods=["GET", "DELETE", "OPTIONS"],
+                allow_methods=["GET", "PUT", "DELETE", "OPTIONS"],
                 allow_headers=["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key"]
             ))
         
@@ -878,6 +882,7 @@ class BackendStack(Stack):
             authorization_type=apigw.AuthorizationType.COGNITO,
             authorizer=authorizer
         )
+        
         
         # 1. Definicija Lambda funkcije za brisanje umetnika
         delete_artist_lambda = _lambda.Function(
@@ -1029,20 +1034,32 @@ class BackendStack(Stack):
         update_album_lambda = _lambda.Function(
             self, "UpdateAlbumLambda",
             runtime=_lambda.Runtime.PYTHON_3_9,
-            # Koristimo handler tvoje funkcije: 'update_album_metadata_cover.handler'
-            handler="update_album.handler", 
-            code=_lambda.Code.from_asset("backend/lambdas/content"),
+            handler="update_album.handler", # <-- REFERENCA NA NOVI FAJL
+            code=_lambda.Code.from_asset("backend/lambdas/content"), 
             timeout=Duration.seconds(30),
-            memory_size=512,
             environment={
-                "ALBUMS_TABLE": table_albums.table_name,
-                "IMAGES_BUCKET": images_bucket.bucket_name,
-                "FILTER_UPDATE_LAMBDA": update_filter_lambda.function_name, ## DA LI SE KORISTI ISTA
-                # Dodaj ostale ENV varijable koje koristi tvoja Lambda (npr. NEW_CONTENT_TOPIC_ARN)
+                "ALBUMS_TABLE": table_albums.table_name, # <-- NOVO
+                "ALBUM_ID_INDEX": "AlbumIdIndex", # <-- NOVO (Pretpostavljam da je ovo ime GSI)
+                "IMAGE_BUCKET": images_bucket.bucket_name,
+                "UPDATE_FILTER_LAMBDA": update_filter_lambda.function_name, 
+                "FEED_UPDATE_QUEUE_URL": update_feed_added_content_queue.queue_url, 
+                "NEW_CONTENT_TOPIC_ARN": new_content_topic.topic_arn, 
             }
         )
+
+        album_id_resource.add_method(
+            "PUT", 
+            apigw.LambdaIntegration(update_album_lambda),
+            authorization_type=apigw.AuthorizationType.COGNITO,
+            authorizer=authorizer
+        )
+        
+        # B. Dodelite Dozvole
         table_albums.grant_read_write_data(update_album_lambda)
-        images_bucket.grant_read_write(update_album_lambda)
+        images_bucket.grant_delete(update_album_lambda)
+        update_filter_lambda.grant_invoke(update_album_lambda)
+        update_feed_added_content_queue.grant_send_messages(update_album_lambda)
+        new_content_topic.grant_publish(update_album_lambda)
         
         # 3. Dodavanje API Gateway rute za PUT /singles/{singleId}
         
@@ -1053,13 +1070,6 @@ class BackendStack(Stack):
             authorization_type=apigw.AuthorizationType.COGNITO,
             authorizer=authorizer
         )    
-        album_id_resource.add_method(
-            "PUT",
-            apigw.LambdaIntegration(update_album_lambda),
-            authorization_type=apigw.AuthorizationType.COGNITO,
-            authorizer=authorizer
-            # authorizer=self.user_pool_authorizer # Ako već imaš definisan Authorizer
-        )
         
         albums.add_method(
             "POST",

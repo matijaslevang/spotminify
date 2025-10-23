@@ -42,9 +42,17 @@ export class AlbumViewComponent {
         album: this.album
       }
     });
-   // ref.afterClosed().subscribe(ok => ok && this.reloadAlbum());
+    ref.afterClosed().subscribe(ok => ok && this.reloadAlbum());
   }
-
+ 
+  reloadAlbum(){
+    this.contentService.getAlbum(this.albumId).subscribe({
+        next: async (album: Album) => {
+          this.album = album;
+          console.log(album)
+        }
+      })
+  }
   ngOnInit() {
     console.log(this.albumId)
     this.contentService.getAlbum(this.albumId).subscribe({

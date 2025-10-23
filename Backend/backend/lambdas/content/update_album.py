@@ -1,22 +1,32 @@
-import os
-import json
-import uuid
-import boto3
-from urllib.parse import urlparse, parse_qs
-from requests_toolbelt.multipart import decoder
+import os, json, uuid, boto3, datetime
+from botocore.exceptions import ClientError
 from decimal import Decimal
 
-# Inicijalizacija AWS klijenata
 s3 = boto3.client("s3")
-ddb = boto3.client("dynamodb")
+ddb = boto3.resource("dynamodb")
+ddb_client = boto3.client("dynamodb")
 lambda_client = boto3.client("lambda")
+sns = boto3.client("sns")
+sqs_client = boto3.client('sqs')
 
-# Varijable okruženja
-ALBUMS_TABLE = os.environ["ALBUMS_TABLE"]
-IMAGES_BUCKET = os.environ["IMAGES_BUCKET"]
-FILTER_UPDATE_LAMBDA = os.environ.get("FILTER_UPDATE_LAMBDA", "filter-update-album-placeholder") # Predpostavka: treba nam i filter update
-NEW_CONTENT_TOPIC_ARN = os.environ.get("NEW_CONTENT_TOPIC_ARN", "arn:aws:sns:us-east-1:123456789012:new-content-topic")
+IMAGE_BUCKET = os.environ["IMAGE_BUCKET"]
+ALBUMS_TABLE = os.environ["ALBUMS_TABLE"] 
+ALBUM_ID_INDEX = os.environ["ALBUM_ID_INDEX"] 
+UPDATE_FILTER_LAMBDA = os.environ["UPDATE_FILTER_LAMBDA"]
+FEED_UPDATE_QUEUE_URL = os.environ["FEED_UPDATE_QUEUE_URL"]
+NEW_CONTENT_TOPIC_ARN = os.environ["NEW_CONTENT_TOPIC_ARN"]
+albums_table = ddb.Table(ALBUMS_TABLE)
 
+# DecimalEncoder i cors funkcije ostaju ISTE
+class DecimalEncoder(json.JSONEncoder):
+    # ... (kod DecimalEncoder-a je isti)
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            if obj % 1 == 0:
+                return int(obj)
+            else:
+                return float(obj)
+        return super(DecimalEncoder, self).default(obj)
 def cors():
     return {
         "Access-Control-Allow-Origin": "*",
@@ -24,284 +34,204 @@ def cors():
         "Access-Control-Allow-Methods": "OPTIONS,GET,PUT,POST,DELETE"
     }
 
-def get_current_album(album_id: str, artist_id: str):
-    """Pronađi trenutne podatke o albumu koristeći njegov ID i ArtistId (PK)."""
-    try:
-        response = ddb.get_item(
-            TableName=ALBUMS_TABLE,
-            Key={
-                'artistId': {'S': artist_id},
-                'albumId': {'S': album_id}
-            }
-        )
-        # Boto3 vraća Dict sa tipovima podataka (npr. {'S': 'value'}). Ovo je jednostavan način za dekodiranje.
-        return response.get('Item')
-    except Exception as e:
-        print(f"Error fetching album {album_id}: {str(e)}")
+# Funkcija za konstruisanje URL-a za sliku ostaje ista
+def _construct_image_url(image_key):
+    """Konstruiše puni javni URL za sliku (cover)."""
+    if not image_key:
         return None
+    return f"https://{IMAGE_BUCKET}.s3.amazonaws.com/{image_key}"
 
-def ddb_item_to_dict(ddb_item):
-    """
-    Pomoćna funkcija za pretvaranje DynamoDB stavke u običan Python rječnik.
-    Pojednostavljeno: obrađuje samo tipove String (S) i String Set (SS).
-    """
-    if not ddb_item:
-        return {}
-    
-    result = {}
-    for key, value in ddb_item.items():
-        if 'S' in value:
-            result[key] = value['S']
-        elif 'SS' in value:
-            result[key] = value['SS']
-    return result
 
-def get_s3_key_from_url(url):
-    """Ekstrahuje S3 ključ iz punog S3 URL-a."""
-    try:
-        if not url:
-            return None
-        # Prvo parsujemo URL
-        parsed_url = urlparse(url)
-        # path je obično ključ (bez vodeće kose crte)
-        # Trimujemo prvu '/' ako postoji
-        key = parsed_url.path.lstrip('/')
-        return key if key else None
-    except:
-        return None
+# FUNKCIJA ZA DOBIJANJE ALBUMA (analogno _get_single_by_id)
+def _get_album_by_id(albumId):
+    """Dobavlja album iz DynamoDB koristeći GSI"""
+    response = ddb_client.query(
+        TableName=ALBUMS_TABLE,
+        IndexName=ALBUM_ID_INDEX,
+        KeyConditionExpression='albumId = :id',
+        ExpressionAttributeValues={':id': {'S': albumId}}
+    )
+    if response['Items']:
+        return boto3.dynamodb.types.TypeDeserializer().deserialize({'M': response['Items'][0]})
+    return None
 
 def handler(event, _):
     try:
+        # Autorizacija: Proveravamo da li je Admin
         claims = (event.get("requestContext", {}) or {}).get("authorizer", {}).get("claims", {}) or {}
         if claims.get("custom:role") != "Admin":
-            return {"statusCode": 403, "headers": cors(), "body": json.dumps({"error": "forbidden"})}
+            return {"statusCode":403,"headers":cors(),"body":json.dumps({"error": "Admin access required"})}
+        
+        albumId = event['pathParameters']['albumId'] # <-- albumId umesto singleId
+        body = json.loads(event['body'])
+        
+        # Ažurirani podaci iz tela zahteva
+        new_title = body.get('title')
+        new_genres = body.get('genres')
+        new_artist_ids = body.get('artistIds')
+        new_artist_names = body.get('artistNames')
+        new_image_key = body.get('coverKey') # Novi S3 ključ ako je slika zamenjena
 
-        # RUKOVANJE MULTIPART/FORM-DATA
-        content_type_header = event["headers"].get("content-type") or event["headers"].get("Content-Type")
+        # Konverzija (isto kao za single)
+        if isinstance(new_genres, (set, tuple)): new_genres = list(new_genres)
+        if isinstance(new_artist_ids, (set, tuple)): new_artist_ids = list(new_artist_ids)
         
-        # Ako nema Content-Type, pretpostavljamo da je FormData ili JSON (mada bi trebalo biti FormData)
-        if not content_type_header:
-             return {"statusCode": 400, "headers": cors(), "body": json.dumps({"error": "Missing Content-Type header"})}
-        
-        # Dekodovanje FormData (binarni dio)
-        body = event["body"]
-        if event.get("isBase64Encoded"):
-            body = base64.b64decode(body)
+        # 1. DOBIJANJE POSTOJEĆEG ALBUMA
+        old_item = _get_album_by_id(albumId)
+        if not old_item:
+            return {"statusCode":404,"headers":cors(),"body":json.dumps({"error": "Album not found"})}
 
-        data = {}
-        file_to_upload = None
+        # Važni ključevi iz starog albuma
+        old_artist_id = old_item['artistId']
+        old_image_key = old_item.get('coverKey')
         
-        # Toolbelt dekoder za multipart/form-data
-        for part in decoder.MultipartDecoder(body, content_type_header).parts:
-            headers = part.headers
-            content_disp = headers.get(b'Content-Disposition', b'').decode('utf-8')
-            
-            # Ekstrahuj ime polja
-            name_match = next((p.split('=')[1].strip('"') for p in content_disp.split(';') if p.strip().startswith('name=')), None)
-            
-            if name_match:
-                # Polje je fajl (cover)
-                if name_match == "cover" and part.content:
-                    # Kreiramo S3 ključ za novu sliku
-                    new_image_key = f"album-covers/{uuid.uuid4()}"
-                    file_to_upload = {
-                        "key": new_image_key,
-                        "content": part.content,
-                        "content_type": part.headers.get(b'Content-Type', b'image/jpeg').decode('utf-8')
-                    }
-                    data["coverKey"] = new_image_key
-                # Polje je regularna forma
-                elif name_match in ["title", "albumId", "artistIds", "genres", "currentArtistId"]:
-                    value = part.content.decode('utf-8')
-                    if name_match in ["artistIds", "genres"]:
-                        # Rukovanje nizovima koji dolaze kao ponovljena polja u FormData
-                        if name_match not in data:
-                            data[name_match] = []
-                        data[name_match].append(value)
-                    else:
-                        data[name_match] = value
-                
-        # Validacija potrebnih polja
-        album_id = data.get("albumId")
-        # Primarni ključ (artistId) mora biti dostavljen da bi se pronašao album u DynamoDB-u
-        # Trenutni PK je neophodan da bismo pronašli stavku u DDB (jer je PK composite key)
-        current_artist_id = data.get("currentArtistId") 
-        title = data.get("title", "").strip()
-        artistIds = data.get("artistIds")
-        genres = data.get("genres")
+        # 2. VALIDACIJA PK (Isto kao za single)
+        if old_artist_id not in new_artist_ids:
+             return {"statusCode":400,"headers":cors(),"body":json.dumps({"error": "Original artistId must be present in new artistIds list."})}
+
+        # 3. RUKOVANJE S3 FAJLOVIMA (Samo Image)
+        current_image_key = old_image_key # Podrazumevano, zadržavamo stari ključ
+        remove_expression = ""
+
+        if new_image_key is not None and new_image_key != old_image_key:
+            # Zamena slike: Koristimo novi ključ i brišemo stari
+            if old_image_key:
+                try:
+                    s3.delete_object(Bucket=IMAGE_BUCKET, Key=old_image_key)
+                    print(f"Obrisana stara cover slika: {old_image_key}")
+                except ClientError as e:
+                    print(f"Upozorenje: Nije moguće obrisati staru cover sliku {old_image_key}. Greška: {e}")
+            current_image_key = new_image_key
         
-        if not album_id: return {"statusCode": 400, "headers": cors(), "body": json.dumps({"error": "albumId required"})}
-        if not current_artist_id: return {"statusCode": 400, "headers": cors(), "body": json.dumps({"error": "currentArtistId (PK) required"})}
-        if not title: return {"statusCode": 400, "headers": cors(), "body": json.dumps({"error": "title required"})}
-        if not artistIds: return {"statusCode": 400, "headers": cors(), "body": json.dumps({"error": "artistIds required"})}
-        
-        # DOHVAT TRENUTNIH PODATAKA ALBUMA
-        current_album_item = get_current_album(album_id, current_artist_id)
-        if not current_album_item:
-             return {"statusCode": 404, "headers": cors(), "body": json.dumps({"error": f"Album with ID {album_id} not found."})}
-        
-        current_album_dict = ddb_item_to_dict(current_album_item)
-        
-        # PROVJERA PROMJENE PK
-        # Ako je ArtistId (PK) promijenjen, morate obrisati stari i kreirati novi unos.
-        # U ovom scenariju, ArtistId je prvi element liste artistIds.
-        new_pk_artist_id = artistIds[0]
-        pk_changed = new_pk_artist_id != current_artist_id
-        
-        # 1. PRIPREMA AŽURIRANJA I MIGRACIJA SLIKE
-        
-        # Inicijalizacija ključeva za DynamoDB UpdateExpression
-        update_expression_parts = []
-        expression_attribute_values = {}
+        elif new_image_key is None and old_image_key:
+             # Brisane slike: Klijent je poslao new_image_key = None, a stara je postojala.
+             try:
+                 s3.delete_object(Bucket=IMAGE_BUCKET, Key=old_image_key)
+                 print(f"Obrisana stara cover slika jer je uklonjena: {old_image_key}")
+             except ClientError as e:
+                 print(f"Upozorenje: Nije moguće obrisati staru cover sliku (uklonjena) {old_image_key}. Greška: {e}")
+             current_image_key = None
+             remove_expression = " REMOVE coverKey" # <-- DODATO
+
+        # 4. AŽURIRANJE DynamoDB-a
+        update_parts = []
         expression_attribute_names = {}
-        remove_expression_parts = []
+        expression_attribute_values = {}
         
-        # Definisanje novog S3 ključa i URL-a
-        new_image_key = None
+        if new_title is not None:
+            update_parts.append("#title = :t")
+            expression_attribute_names['#title'] = 'title'
+            expression_attribute_values[':t'] = new_title
         
-        # Da li je korisnik uploadovao novu sliku?
-        if file_to_upload:
-            # Upload nove slike na S3
-            s3.put_object(
-                Bucket=IMAGES_BUCKET,
-                Key=file_to_upload["key"],
-                Body=file_to_upload["content"],
-                ContentType=file_to_upload["content_type"]
-            )
-            new_image_key = file_to_upload["key"]
-            
-            # Brišemo staru sliku (ako je postojala)
-            old_image_url = current_album_dict.get("coverKey")
-            old_image_key = get_s3_key_from_url(old_image_url)
-            
-            # Samo brišemo ako je ključ zaista bio u našem album-covers folderu
-            if old_image_key and old_image_key.startswith("album-covers/"):
-                s3.delete_object(Bucket=IMAGES_BUCKET, Key=old_image_key)
-                print(f"Deleted old image: {old_image_key}")
-
-        # Ako nije uploadovana nova slika, ali je polje coverKey postojalo, zadržavamo staru
-        # Ako coverKey nije bio prisutan u FormData (što je default ponašanje kod nas), koristi se stara vrednost.
-        # Ako je coverKey eksplicitno null/prazno (što je teško iz FormDatea), onda ga brišemo.
+        if new_genres is not None:
+            update_parts.append("genres = :g")
+            expression_attribute_values[':g'] = new_genres
         
-        # UPDATE ATRIBUTA
+        if new_artist_ids is not None:
+            update_parts.append("artistIds = :aId")
+            expression_attribute_values[':aId'] = new_artist_ids
         
-        # Ažuriranje Naslova
-        update_expression_parts.append("#t = :t")
-        expression_attribute_names["#t"] = "title"
-        expression_attribute_values[":t"] = {"S": title}
+        if new_artist_names is not None:
+            update_parts.append("artistNames = :aN")
+            expression_attribute_values[':aN'] = new_artist_names
 
-        # Ažuriranje Žanrova
-        update_expression_parts.append("genres = :g")
-        expression_attribute_values[":g"] = {"SS": genres}
-
-        # Ažuriranje Artist ID-eva
-        update_expression_parts.append("artistIds = :a")
-        expression_attribute_values[":a"] = {"SS": artistIds}
+        # Rukovanje slikom u DynamoDB Update izrazu
+        full_image_url = _construct_image_url(current_image_key) # Može biti None
         
-        # Ažuriranje Slike
-        if new_image_key:
-            # Postavili smo novu sliku
-            full_image_url = f"https://{IMAGES_BUCKET}.s3.amazonaws.com/{new_image_key}"
-            update_expression_parts.append("coverKey = :ck")
-            expression_attribute_values[":ck"] = {"S": full_image_url}
-        else:
-            # Koristimo staru sliku. Ovdje je ključno: ako nije poslan novi fajl, 
-            # DDB operacija ne treba da dira stari coverKey polje. 
-            # U ovom kodu, polje se diralo samo ako je poslan novi fajl (kao gore). 
-            # Dakle, ako new_image_key nije setovan, stari coverKey ostaje u item-u.
-            pass
-
-        # 2. IZVRŠAVANJE DYNAMODB OPERACIJE
+        if current_image_key is not None and current_image_key != old_image_key:
+            # Slika je zamenjena/dodata (SET)
+            #update_parts.append("imageKey = :ik")
+            update_parts.append("coverKey = :ik")
+            expression_attribute_values[':ik'] = full_image_url
+            
+        # Ako je slika obrisana (remove_expression je već postavljen)
         
-        # Ako se Partition Key (artistId) mijenja, moramo obrisati stari item i kreirati novi.
-        # Ako artistIds polje postoji i prvi ID se promijenio, to je promena PK.
-        if pk_changed:
-            
-            # 2a. Brisanje starog item-a
-            ddb.delete_item(
-                TableName=ALBUMS_TABLE,
-                Key={
-                    'artistId': {'S': current_artist_id},
-                    'albumId': {'S': album_id}
-                }
-            )
-            
-            # 2b. Kreiranje novog item-a (sa novim PK)
-            # Kopiramo stare podatke i prebrisujemo nove
-            new_item = current_album_item.copy()
-            # Ažuriranje PK/SK
-            new_item['artistId'] = {'S': new_pk_artist_id}
-            # Ažuriranje polja
-            new_item['title'] = {'S': title}
-            new_item['genres'] = {'SS': genres}
-            new_item['artistIds'] = {'SS': artistIds}
-            
-            if new_image_key:
-                 new_item['coverKey'] = {'S': f"https://{IMAGES_BUCKET}.s3.amazonaws.com/{new_image_key}"}
-            elif "coverKey" in new_item:
-                 # Ako coverKey nije promijenjen, DDB ga vraća u starom formatu.
-                 pass
-            
-            ddb.put_item(TableName=ALBUMS_TABLE, Item=new_item)
-            
-            print(f"Album {album_id}: PK changed from {current_artist_id} to {new_pk_artist_id}. Item migrated.")
+        update_parts.append("updatedAt = :u")
+        expression_attribute_values[':u'] = datetime.datetime.now().isoformat()
+        
+        if not update_parts and not remove_expression:
+            if not update_parts:
+                update_parts.append("updatedAt = :u")
 
-        else:
-            # Ako je Partition Key isti, radimo standardni UpdateItem
-            update_expression = "SET " + ", ".join(update_expression_parts)
-            
-            # Ako ima polja za brisanje (u ovom scenariju nema, ali za budućnost)
-            if remove_expression_parts:
-                update_expression += " REMOVE " + ", ".join(remove_expression_parts)
-            
-            ddb.update_item(
-                TableName=ALBUMS_TABLE,
-                Key={
-                    'artistId': {'S': current_artist_id}, # PK je star/trenutni
-                    'albumId': {'S': album_id} # SK
-                },
-                UpdateExpression=update_expression,
-                ExpressionAttributeValues=expression_attribute_values,
-                ExpressionAttributeNames=expression_attribute_names,
-                ReturnValues="UPDATED_NEW"
-            )
-            print(f"Album {album_id} updated.")
+        update_expression = "SET " + ", ".join(update_parts)
+        if remove_expression:
+             update_expression += remove_expression
 
-        # 3. POZIV FILTER LAMBDA FUNKCIJE ZA AŽURIRANJE INDEKSA
-        # Učitavamo ažuriranu stavku da bismo je poslali filter funkciji
-        updated_album = get_current_album(album_id, new_pk_artist_id if pk_changed else current_artist_id)
-        updated_album_content = ddb_item_to_dict(updated_album)
-
-        payload_filter = {
-            "contentId": album_id,
-            "contentType": "album",
-            "content": updated_album_content,
-        }
-        lambda_client.invoke(
-            FunctionName=FILTER_UPDATE_LAMBDA,
-            InvocationType="Event",
-            Payload=json.dumps(payload_filter)
+        # Izvršavanje DynamoDB ažuriranja
+        albums_table.update_item( # <-- albums_table umesto singles_table
+            Key={'artistId': old_artist_id, 'albumId': albumId}, # <-- albumId umesto singleId
+            UpdateExpression=update_expression,
+            ExpressionAttributeNames=expression_attribute_names if expression_attribute_names else None,
+            ExpressionAttributeValues=expression_attribute_values,
+            ReturnValues="ALL_NEW"
         )
-        print(f"Invoked Filter Update for album {album_id}")
+        
+        # 5. POZIVANJE DRUGIH SERVISA (Filter i Feed)
+        final_new_content = old_item.copy()
+        if new_title is not None: final_new_content['title'] = new_title
+        if new_genres is not None: final_new_content['genres'] = new_genres
+        if new_artist_ids is not None: final_new_content['artistIds'] = new_artist_ids
+        if new_artist_names is not None: final_new_content['artistNames'] = new_artist_names
+        
+        # Postavljanje URL-a slike u finalni objekat
+        if full_image_url:
+            final_new_content['coverKey'] = full_image_url
+        elif 'coverKey' in final_new_content: # Ako je slika uklonjena
+             del final_new_content['coverKey']
 
-        # 4. PUBLIKOVANJE SNS PORUKE (Opcionalno - za notifikaciju)
-        # Ovu sekciju možete koristiti za obavještavanje drugih servisa o promjeni.
-        # Možda želite da obavijestite sistem za feed o ažuriranju.
-        # try:
-        #     sns_message = {
-        #         'contentType': 'album_updated',
-        #         'contentId': album_id,
-        #         'title': title,
-        #         'artistIds': artistIds,
-        #         'genres': genres
-        #     }
-        #     # sns.publish(...
-        # except Exception as sns_error:
-        #     print(f"Error publishing SNS message for album {album_id}: {str(sns_error)}")
+        final_new_content['updatedAt'] = expression_attribute_values[':u']
+        
+        # A. Ažuriranje Filter/Index tabele (Genre Index, Artist Index)
+        payload_filter = {
+            "contentId": albumId,
+            "contentType": "album", # <-- album umesto single
+            "oldContent": old_item,
+            "newContent": final_new_content
+        }
+        
+        lambda_client.invoke(
+            FunctionName=UPDATE_FILTER_LAMBDA,
+            InvocationType="Event", 
+            Payload=json.dumps(payload_filter, cls=DecimalEncoder))
+        
+        print("Pozvana UPDATE_FILTER_LAMBDA za album")
 
-        return {"statusCode": 200, "headers": cors(), "body": json.dumps({"albumId": album_id, "message": "Album successfully updated"})}
+        # B. Ažuriranje Feed-a (šaljemo poruku u SQS red)
+        payload_feed = {
+            "content": final_new_content,
+            "contentId": albumId,
+            "contentType": "album", # <-- album umesto single
+            "genres": json.dumps(list(final_new_content.get('genres', []))),
+        }
+        sqs_client.send_message(
+            QueueUrl=FEED_UPDATE_QUEUE_URL,
+            MessageBody=json.dumps(payload_feed, cls=DecimalEncoder)
+        )
+        print("Poslata poruka u SQS za ažuriranje Feed-a za album")
 
+        # C. SNS notifikacija
+        try:
+            sns_message = {
+                'contentType': 'album', # <-- album umesto single
+                'contentId': albumId,
+                'title': final_new_content.get('title'),
+                'artistIds': final_new_content.get('artistIds'),
+                'artistNames': final_new_content.get('artistNames'),
+                'genres': final_new_content.get('genres'),
+                'action': 'UPDATE'
+            }
+            sns.publish(
+                TopicArn=NEW_CONTENT_TOPIC_ARN,
+                Message=json.dumps({'default': json.dumps(sns_message, cls=DecimalEncoder)}),
+                MessageStructure='json'
+            )
+            print(f"Published SNS message for album update {albumId}")
+        except Exception as sns_error:
+            print(f"Error publishing SNS update message: {str(sns_error)}")
+
+
+        return {"statusCode":200,"headers":cors(),"body":json.dumps({"message": f"Album {albumId} updated successfully"})}
+        
     except Exception as e:
-        print(f"Global error: {str(e)}")
-        # Vratićemo HTTP 500 sa greškom.
-        return {"statusCode": 500, "headers": cors(), "body": json.dumps({"error": str(e)})}
+        print(f"Greška pri ažuriranju albuma: {str(e)}")
+        return {"statusCode":500,"headers":cors(),"body":json.dumps({"error": str(e)})}

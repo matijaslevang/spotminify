@@ -4,6 +4,10 @@ import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { ContentService } from '../../content.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Artist, Genre } from '../../models/model';
+import { UploadService } from '../../../features/upload.service'; // Dodajte import za UploadService
+import { firstValueFrom } from 'rxjs';
+import { Song } from '../../models/model';
+
 @Component({
   selector: 'app-update-album',
   templateUrl: './update-album.component.html',
@@ -14,17 +18,21 @@ export class UpdateAlbumComponent implements OnInit {
   audioFile?: File;
   form: FormGroup;
 
+  isSaving = false;
   availableArtists: Artist[] = [];
   availableGenres: Genre[] = [];
-
+  albumSongs: Song[] = []; 
+  songsLoading = false;
   ngOnInit(): void {
     this.loadGenres();
     this.loadArtists();
+    this.loadAlbumSongs(this.data.album.id);
   }
 
   constructor(
     private fb: FormBuilder,
     private api: ContentService,
+    private uploadService: UploadService,
     private snackBar: MatSnackBar,
     public ref: MatDialogRef<UpdateAlbumComponent>,
     @Inject(MAT_DIALOG_DATA) public data: {
@@ -38,54 +46,93 @@ export class UpdateAlbumComponent implements OnInit {
       artistIds: [a.artistsIds ?? [], Validators.required]
     });
   }
-
+  loadAlbumSongs(albumId: string): void {
+    this.songsLoading = true;
+    this.api.getSongsByAlbum(albumId).subscribe({
+      next: (songs) => {
+        this.albumSongs = songs;
+        this.songsLoading = false;
+        console.log('Učitane pesme:', songs);
+      },
+      error: (err) => {
+        console.error('Greška pri učitavanju pesama:', err);
+        this.songsLoading = false;
+        // Opcionalno: Prikazivanje poruke o grešci korisniku
+      }
+    });
+  }
   onCover(e: Event){
     const f = (e.target as HTMLInputElement).files?.[0];
     if (f) this.cover = f;
   }
-  onAudioFile(e: Event): void {
-   const input = e.target as HTMLInputElement;
-   const f = input.files?.[0];
-   if (f) this.audioFile = f;
+  getGenreNames(genreIds: (string | number)[]): string[] {
+      return genreIds
+        .map(id => this.availableGenres.find(g => g.genreId === id)?.genreName)
+        .filter((name): name is string => !!name);
   }
 
-  save(){
-    if (this.form.invalid) return;
+  getArtistNames(artistIds: string[]): string[] {
+      return artistIds
+        .map(id => this.availableArtists.find(a => a.artistId === id)?.name)
+        .filter((name): name is string => !!name);
+  }
+  async save(){
+    if (this.form.invalid || this.isSaving) return;
 
-    const fd = new FormData();
-    const albumId = String(this.data.album.albumId ?? this.data.album.id);
-    fd.append('albumId', albumId);
+    this.isSaving = true;
+    let newImageKey: string | undefined = undefined;
+    const albumId = this.data.album.albumId || this.data.album.id; // Dobijamo ID albuma
 
-    const currentArtistId = this.data.album.artistIds?.[0] || '';
-    if (!currentArtistId) {
-        this.snackBar.open('Error: Cannot find Partition Key (current artist ID).', 'Close', { duration: 5000, panelClass: ['error-snackbar'] });
-        return;
+    try {
+        // 1. RUKOVANJE COVER SLIKOM (Upload ako je izabrana nova)
+        if (this.cover) {
+            this.snackBar.open('Uploading cover image...', 'Dismiss', { duration: 0 });
+            
+            const imagePresigned = await firstValueFrom(
+                this.uploadService.getPresignedUrl({
+                    fileName: this.cover.name,
+                    contentType: this.cover.type,
+                    bucketType: 'image' as 'audio' | 'image'
+                })
+            );
+
+            await this.uploadService.putToS3(imagePresigned.url, this.cover, this.cover.type);
+            newImageKey = imagePresigned.key; // Ovo šaljemo Lambdi
+        }
+
+        this.snackBar.dismiss();
+        this.snackBar.open('Updating album metadata...', 'Dismiss', { duration: 0 });
+
+        // 2. PRIPREMA JSON PAYLOAD-a
+        const artistIds: string[] = this.form.get('artistIds')!.value;
+        const genreIds: (string|number)[] = this.form.get('genres')!.value; 
+
+        const payload = {
+            title: this.form.get('title')!.value,
+            genres: this.getGenreNames(genreIds), 
+            artistIds: artistIds,
+            artistNames: this.getArtistNames(artistIds), 
+            
+            ...(newImageKey && { coverKey: newImageKey }),
+        }; 
+
+        this.api.updateAlbum(albumId, payload).subscribe({
+            next: () => {
+                this.snackBar.open('Album updated successfully!', 'Close', { duration: 3000 });
+                this.ref.close(true);
+            },
+            error: (e) => {
+                this.snackBar.open(e?.error?.error || e?.message || 'Failed to update album metadata.', 'Close', { duration: 5000, panelClass: ['error-snackbar'] });
+                this.isSaving = false;
+            }
+        });
+
+    } catch (e) {
+        console.error('Upload or update failed:', e);
+        this.snackBar.open('File upload failed. Try again.', 'Close', { duration: 5000, panelClass: ['error-snackbar'] });
+        this.isSaving = false;
     }
-    fd.append('currentArtistId', currentArtistId);
-
-    fd.append('title', this.form.get('title')!.value);
-
-    const selectedGenreIds: (number | string)[] = this.form.get('genres')!.value;
-    for (const id of selectedGenreIds) fd.append('genres', String(id));
-    
-    const selectedArtistIds: string[] = this.form.get('artistIds')!.value;
-    for (const id of selectedArtistIds) fd.append('artistIds', id);
-    
-    if (this.cover) fd.append('cover', this.cover);
-
-    this.api.updateAlbum(fd).subscribe({
-      next: () => {
-      this.snackBar.open('Album updated successfully!', 'Close', { duration: 3000 });
-        this.ref.close(true)
-    },
-      error: (e) => {
-        const message = e?.error?.error || e?.message || 'Album update failed.';
-        this.snackBar.open(message, 'Close', { duration: 5000, panelClass: ['error-snackbar'] });
-        this.ref.close(false);
-      }
-    });
-  }
-
+}
   loadGenres(): void {
     this.api.getGenres().subscribe({
       next: (genres) => {

@@ -4,7 +4,7 @@ import { UploadService } from '../upload.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Genre, Artist } from '../../content/models/model';
 import { ContentService } from '../../content/content.service';
-
+import { Router } from '@angular/router';
 @Component({
   selector: 'app-admin',
   templateUrl: './admin.component.html',
@@ -45,7 +45,7 @@ export class AdminComponent implements OnInit {
   // Kolekcija singlova za album
   albumSingles: Array<{ title: string; genres: string[]; artistIds: string[]; artistNames: string[]; fileIndex: number }> = [];
 
-  constructor(private fb: FormBuilder, private api: UploadService, private contentService: ContentService,private snack: MatSnackBar) {}
+  constructor(private fb: FormBuilder, private api: UploadService, private contentService: ContentService,private snack: MatSnackBar,private router: Router) {}
 
   ngOnInit() {
     this.loadGenres();
@@ -269,6 +269,7 @@ export class AdminComponent implements OnInit {
     this.api.createSingle(payload).subscribe({
       next: () => {
         this.snack.open('Single created', 'OK', { duration: 2500 });
+        this.router.navigate(['/home']);
         this.resetSingle();
         this.files = []; this.cover = undefined; this.coverPreview = null;
       },
@@ -389,6 +390,7 @@ export class AdminComponent implements OnInit {
     this.api.createAlbum(payload).subscribe({
       next: () => {
         this.snack.open('Album created', 'OK', { duration: 2500 });
+        this.router.navigate(['/home']);
         this.resetAlbum();
         this.albumStep = 0;
         this.albumSingles = [];
