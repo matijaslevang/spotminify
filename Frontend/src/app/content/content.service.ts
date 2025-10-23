@@ -83,7 +83,7 @@ export class ContentService {
   }
 
   getFilteredContentByArtist(artistId: any): Observable<any> {
-    return this.httpClient.get(`${environment.apiUrl}/filter-artist`, { params: { genreName: artistId } })
+    return this.httpClient.get(`${environment.apiUrl}/filter-artist`, { params: { artistId: artistId } })
   }
 
   getMySubscriptions(): Observable<any[]> {

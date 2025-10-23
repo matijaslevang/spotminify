@@ -3,7 +3,7 @@
     <img #songCardImage class="song-card-image" [src]="song.imageKey" [alt]="song.title">
     <div class="info">
       <h3 class="song-name">{{ song.title }}</h3>
-      <p class="song-sub">{{ song.artistIds?.join(', ') }} · {{ song.genres?.join(', ') }}</p>
+      <p class="song-sub">{{ song.artistNames?.join(', ') }} · {{ song.genres?.join(', ') }}</p>
     </div>
   </div>
 

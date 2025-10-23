@@ -2,11 +2,22 @@ import os
 import json
 import boto3
 from boto3.dynamodb.conditions import Key, Attr
+from decimal import Decimal
 
 dynamodb = boto3.resource("dynamodb")
 TABLE_NAME = os.environ["SINGLE_TABLE"]
 GSI_NAME = os.environ["SINGLES_GSI"]
 table = dynamodb.Table(TABLE_NAME)
+
+def custom_json_serializer(obj):
+    if isinstance(obj, Decimal):
+        if obj % 1 == 0:
+            return int(obj)
+        else:
+            return float(obj)
+    if isinstance(obj, set):
+        return list(obj)
+    raise TypeError("Type %s not serializable" % type(obj))
 
 def handler(event, context):
     album_id = event['queryStringParameters']['albumId']
@@ -24,7 +35,7 @@ def handler(event, context):
             single['trackNo'] = int(single['trackNo'])
         return {
             "statusCode": 200,
-            "body": json.dumps(singles),
+            "body": json.dumps(singles, default=custom_json_serializer),
             "headers": cors_headers()
         }
     else:

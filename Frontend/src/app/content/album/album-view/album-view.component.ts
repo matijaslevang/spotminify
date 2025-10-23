@@ -18,7 +18,8 @@ export class AlbumViewComponent {
     genres: [],
     coverKey: "",
     averageRating: null, 
-    ratingCount: 0
+    ratingCount: 0,
+    artistNames: []
   }
   albumId: string;
   albumSingles: Song[] = []
