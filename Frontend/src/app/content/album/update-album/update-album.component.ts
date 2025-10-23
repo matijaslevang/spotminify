@@ -28,9 +28,7 @@ export class UpdateAlbumComponent implements OnInit {
     private snackBar: MatSnackBar,
     public ref: MatDialogRef<UpdateAlbumComponent>,
     @Inject(MAT_DIALOG_DATA) public data: {
-      album: any;                  // { albumId | id, name, genres[], artists[] ... }
-      availableGenres: any[] // Pretpostavljeno: niz stringova
-      artistOptions: string[];
+      album: any;                 
     }
   ){
     const a = data.album ?? {};
@@ -55,15 +53,36 @@ export class UpdateAlbumComponent implements OnInit {
     if (this.form.invalid) return;
 
     const fd = new FormData();
-    fd.append('albumId', String(this.data.album.albumId ?? this.data.album.id));
+    const albumId = String(this.data.album.albumId ?? this.data.album.id);
+    fd.append('albumId', albumId);
+
+    const currentArtistId = this.data.album.artistIds?.[0] || '';
+    if (!currentArtistId) {
+        this.snackBar.open('Error: Cannot find Partition Key (current artist ID).', 'Close', { duration: 5000, panelClass: ['error-snackbar'] });
+        return;
+    }
+    fd.append('currentArtistId', currentArtistId);
+
     fd.append('title', this.form.get('title')!.value);
-    for (const g of (this.form.get('genres')!.value as string[])) fd.append('genres', g);
-    for (const a of (this.form.get('artistIds')!.value as string[])) fd.append('artistIds', a);
+
+    const selectedGenreIds: (number | string)[] = this.form.get('genres')!.value;
+    for (const id of selectedGenreIds) fd.append('genres', String(id));
+    
+    const selectedArtistIds: string[] = this.form.get('artistIds')!.value;
+    for (const id of selectedArtistIds) fd.append('artistIds', id);
+    
     if (this.cover) fd.append('cover', this.cover);
 
     this.api.updateAlbum(fd).subscribe({
-      next: () => this.ref.close(true),
-      error: () => this.ref.close(false)
+      next: () => {
+      this.snackBar.open('Album updated successfully!', 'Close', { duration: 3000 });
+        this.ref.close(true)
+    },
+      error: (e) => {
+        const message = e?.error?.error || e?.message || 'Album update failed.';
+        this.snackBar.open(message, 'Close', { duration: 5000, panelClass: ['error-snackbar'] });
+        this.ref.close(false);
+      }
     });
   }
 
@@ -102,17 +121,23 @@ export class UpdateAlbumComponent implements OnInit {
     });
   }
   loadArtists(): void {
-  this.api.getArtists().subscribe({
-    next: (artists) => {
-      this.availableArtists = artists;
-    },
-    error: (err) => {
-      this.snackBar.open('Failed to load artists. Please try again later.', 'Close', {
-        duration: 5000,
-        panelClass: ['error-snackbar']
-      });
-    }
-  });
-  }
+   this.api.getArtists().subscribe({
+     next: (artists) => {
+       this.availableArtists = artists;
+
+      const s = this.data.album ?? {};
+      const selectedArtistIds: string[] = s.artistIds ?? [];
+      
+      this.form.get('artistIds')?.patchValue(selectedArtistIds); 
+
+     },
+     error: (err) => {
+       this.snackBar.open('Failed to load artists. Please try again later.', 'Close', {
+       duration: 5000,
+       panelClass: ['error-snackbar']
+       });
+   }
+   });
+   }
   cancel(){ this.ref.close(false); }
 }
