@@ -1,6 +1,6 @@
 <div class="container">
     <img class="song-image" src={{song.imageKey}} alt={{song.title}} [class.spinning]="isPlaying">
-    <p class="song-name">{{song.title}} by {{song.artistIds}} - {{song.genres}}</p>
+    <p class="song-name">{{song.title}} by {{song.artistNames?.join(', ')}} - {{song.genres}}</p>
     <br>
     <div class="average-rating-display">
         <ng-container *ngIf="song.averageRating !== null && song.ratingCount > 0; else noRating">

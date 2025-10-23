@@ -3,7 +3,7 @@
     <img #albumCardImage class="album-card-image" [src]="album.coverKey" [alt]="album.title">
     <div class="info">
       <h3 class="album-name">{{ album.title }}</h3>
-      <p class="album-sub">{{ album.artistIds?.join(', ') }} · {{ album.genres?.join(', ') }}</p>
+      <p class="album-sub">{{ album.artistNames?.join(', ') }} · {{ album.genres?.join(', ') }}</p>
     </div>
   </div>
 

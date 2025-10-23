@@ -18,7 +18,8 @@ export class SongCardComponent implements AfterViewInit {
     imageKey: '',
     audioKey: '',
     averageRating: 0,
-    ratingCount:0
+    ratingCount:0,
+    artistNames: []
   };
   @Input() filterDetails: FilterDetails
 

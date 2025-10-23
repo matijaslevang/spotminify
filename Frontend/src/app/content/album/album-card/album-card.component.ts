@@ -17,7 +17,8 @@ export class AlbumCardComponent {
     genres: [],
     coverKey: '',
     averageRating: 0,
-    ratingCount:0
+    ratingCount:0,
+    artistNames: []
   };
   @Input() filterDetails: FilterDetails
   isAdmin: boolean = false;

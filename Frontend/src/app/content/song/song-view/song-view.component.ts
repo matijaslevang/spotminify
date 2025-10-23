@@ -21,7 +21,8 @@ export class SongViewComponent {
     imageKey: "",
     audioKey: "",
     averageRating: null, 
-    ratingCount: 0
+    ratingCount: 0,
+    artistNames: []
   }
   songId: string = "";
 
