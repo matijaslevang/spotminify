@@ -160,6 +160,13 @@ class BackendStack(Stack):
             removal_policy=RemovalPolicy.DESTROY
         )
 
+        table_feed_cache.add_global_secondary_index(
+            index_name="by-content-id",
+            partition_key=dynamodb.Attribute(name="contentId", type=dynamodb.AttributeType.STRING),
+            sort_key=dynamodb.Attribute(name="username", type=dynamodb.AttributeType.STRING),
+            projection_type=dynamodb.ProjectionType.KEYS_ONLY
+        )
+
         table_artists = dynamodb.Table(
             self, "Artists",
             partition_key=dynamodb.Attribute(name="artistId", type=dynamodb.AttributeType.STRING),
@@ -763,28 +770,33 @@ class BackendStack(Stack):
             self, "DeleteSingleLambda",
             function_name="DeleteSingleLambda",
             runtime=_lambda.Runtime.PYTHON_3_9,
-            handler="delete_single.handler", # Ovo će biti fajl backend/lambdas/content/delete_single.py
+            handler="delete_single.handler",
             code=_lambda.Code.from_asset("backend/lambdas/content"),
-            timeout= Duration.seconds(10), # dodati import cdk gore ako nije
+            timeout= Duration.seconds(10),
             environment={
                 "SINGLES_TABLE": table_singles.table_name,
                 "AUDIO_BUCKET": audio_bucket.bucket_name,
                 "IMAGES_BUCKET": images_bucket.bucket_name,
-                # Za kompleksno brisanje (brisati i iz indexa)
                 "GENRE_INDEX_TABLE": table_genre_index.table_name, 
                 "ARTIST_INDEX_TABLE": table_artist_index.table_name,
+                "FEED_CACHE_TABLE": table_feed_cache.table_name
             }
         )
         
         # Dozvole za DynamoDB i S3
-        table_singles.grant_write_data(delete_single_lambda) # Dozvola za DELETE ITEM iz Singles
-        table_singles.grant_read_data(delete_single_lambda)
-        audio_bucket.grant_delete(delete_single_lambda)      # Dozvola za s3:DeleteObject iz audio bucketa
-        images_bucket.grant_delete(delete_single_lambda)     # Dozvola za s3:DeleteObject iz image bucketa
-
-        # Dozvole za brisanje iz filter indexa (GenreIndex i ArtistIndex)
+        table_singles.grant_read_write_data(delete_single_lambda)
+        audio_bucket.grant_delete(delete_single_lambda)
+        images_bucket.grant_delete(delete_single_lambda)
         table_genre_index.grant_write_data(delete_single_lambda)
         table_artist_index.grant_write_data(delete_single_lambda)
+
+        table_feed_cache.grant_read_write_data(delete_single_lambda)
+        delete_single_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["dynamodb:Query"],
+                resources=[f"{table_feed_cache.table_arn}/index/by-content-id"] 
+            )
+        )
         
         # Kreiranje podresursa /singles/{singleId}
         single_id_resource = singles.add_resource("{singleId}",
@@ -815,7 +827,7 @@ class BackendStack(Stack):
                 "AUDIO_BUCKET": audio_bucket.bucket_name,
                 "IMAGES_BUCKET": images_bucket.bucket_name,
                 "GENRE_INDEX_TABLE": table_genre_index.table_name,
-                "ARTIST_INDEX_TABLE": table_artist_index.table_name,
+                "ARTIST_INDEX_TABLE": table_artist_index.table_name
             }
         )
 

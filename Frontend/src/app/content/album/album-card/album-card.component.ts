@@ -66,6 +66,7 @@ export class AlbumCardComponent {
               next: (response) => {
                   console.log('Album deleted successfully', response);
                   alert('Album i sve pesme uspešno obrisani!');
+                  window.location.reload();
                   // TODO: Dodati navigaciju ili osvežavanje liste albuma
               },
               error: (error) => {
