@@ -33,9 +33,9 @@ def handler(event, context):
         
         genres_to_add: Set[str] = new_genres - old_genres # Novi žanrovi
         genres_to_remove: Set[str] = old_genres - new_genres # Žanrovi za brisanje
+        genres_to_keep: Set[str] = old_genres.intersection(new_genres) # Žanrovi koji ostaju isti
         
-        print(f"Žanrovi za dodavanje: {genres_to_add}, Žanrovi za brisanje: {genres_to_remove}")
-
+        print(f"Žanrovi za dodavanje: {genres_to_add}, Žanrovi za brisanje: {genres_to_remove}, Žanrovi za zadržavanje: {genres_to_keep}")
         # Brisanje starih unosa
         for genre in genres_to_remove:
             try:

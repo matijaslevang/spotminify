@@ -128,7 +128,8 @@ def handler(event, _):
             
         # ----- image -------
         current_image_key = old_image_key # Podrazumevano, zadržavamo stari ključ
-        
+        print('New image key')
+        print(new_image_key)
         if new_image_key is not None and new_image_key != old_image_key:
             # Zamena slike: Koristimo novi ključ i brišemo stari
             if old_image_key:
@@ -174,24 +175,29 @@ def handler(event, _):
             update_parts.append("explicit = :e")
             expression_attribute_values[':e'] = new_explicit
         
-        full_audio_url = _construct_audio_url(current_audio_key)
-        update_parts.append("audioKey = :ak")
-        expression_attribute_values[':ak'] = full_audio_url
+        full_audio_url = old_audio_key
+        if current_audio_key != old_audio_key:
+            full_audio_url = _construct_audio_url(current_audio_key) # kriticnoo
+            update_parts.append("audioKey = :ak")
+            expression_attribute_values[':ak'] = current_audio_key
+            # expression_attribute_values[':ak'] = full_audio_url PRE RADILO OVO
         
         update_parts.append("updatedAt = :u")
         expression_attribute_values[':u'] = datetime.datetime.now().isoformat()       
         
         remove_expression = ""
         #PROBLEM
-        full_image_url = None
+        full_image_url = old_image_key
         
-        if current_image_key:
+        if current_image_key!=old_image_key:
             # Slika postoji (bilo stara, bilo nova)
             full_image_url = _construct_image_url(current_image_key)
             update_parts.append("imageKey = :ik")
-            expression_attribute_values[':ik'] = full_image_url
-        elif old_image_key and current_image_key is None:
-            remove_expression = " REMOVE imageKey"
+            expression_attribute_values[':ik'] = current_image_key
+            # expression_attribute_values[':ik'] = full_image_url RADILO
+            
+        # elif old_image_key and current_image_key is None:
+        #     remove_expression = " REMOVE imageKey"
      
         if not update_parts and not remove_expression:
             # Dodajemo barem updatedAt da bi izraz bio validan
@@ -221,7 +227,7 @@ def handler(event, _):
         final_new_content['audioKey'] = full_audio_url
         print('Full audio')
         print(full_audio_url)
-        
+       
         print('Full image')
         print(full_image_url)
         
@@ -239,6 +245,7 @@ def handler(event, _):
             "oldContent": old_item,
             "newContent": final_new_content
         }
+        
         lambda_client.invoke(
             FunctionName=UPDATE_FILTER_LAMBDA,
             InvocationType="Event", # Asinhroni poziv
