@@ -56,7 +56,7 @@
             <h2>Top Songs</h2>
             <div class="song-list" *ngIf="artistSongs.length > 0; else noSongs">
                 <div *ngFor="let song of artistSongs">
-                    <app-song-card></app-song-card>
+                    <app-song-card [song]="song"></app-song-card>
                 </div>
             </div>
             <ng-template #noSongs><p class="no-content-message">No songs found for this artist.</p></ng-template>
@@ -66,7 +66,7 @@
             <h2>Albums</h2>
             <div class="album-list" *ngIf="artistAlbums.length > 0; else noAlbums">
                 <div *ngFor="let album of artistAlbums">
-                    <app-album-card></app-album-card>
+                    <app-album-card [album]="album"></app-album-card>
                 </div>
             </div>
             <ng-template #noAlbums><p class="no-content-message">No albums found for this artist.</p></ng-template>
