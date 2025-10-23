@@ -4,7 +4,7 @@ import { UploadService } from '../upload.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Genre, Artist } from '../../content/models/model';
 import { ContentService } from '../../content/content.service';
-
+import { Router } from '@angular/router';
 @Component({
   selector: 'app-admin',
   templateUrl: './admin.component.html',
@@ -17,7 +17,10 @@ export class AdminComponent implements OnInit {
 
   files: File[] = [];
   cover?: File;
+  singleCover?: File;
+
   coverPreview?: string | ArrayBuffer | null;
+  singleCoverPreview?: string | ArrayBuffer | null;
 
   tabIndex = 0; // 0 = single, 1 = album
 
@@ -42,7 +45,7 @@ export class AdminComponent implements OnInit {
   // Kolekcija singlova za album
   albumSingles: Array<{ title: string; genres: string[]; artistIds: string[]; artistNames: string[]; fileIndex: number }> = [];
 
-  constructor(private fb: FormBuilder, private api: UploadService, private contentService: ContentService,private snack: MatSnackBar) {}
+  constructor(private fb: FormBuilder, private api: UploadService, private contentService: ContentService,private snack: MatSnackBar,private router: Router) {}
 
   ngOnInit() {
     this.loadGenres();
@@ -115,6 +118,13 @@ export class AdminComponent implements OnInit {
       input.value = '';
     }
   }
+  onSingleCoverSelected(ev: Event) {
+  const input = ev.target as HTMLInputElement;
+  if (input.files?.[0]) {
+    this.setSingleCover(input.files[0]);
+    input.value = '';
+  }
+}
   loadGenres(): void {
     this.contentService.getGenres().subscribe({
       next: (genres) => {
@@ -147,7 +157,13 @@ export class AdminComponent implements OnInit {
       this.setCover(e.dataTransfer.files[0]);
     }
   }
-
+  
+  onSingleAlbumCoverDrop(e: DragEvent) {
+    e.preventDefault();
+    if (e.dataTransfer?.files?.[0]) {
+      this.setSingleCover(e.dataTransfer.files[0]);
+    }
+  }
   private setCover(file: File) {
     if (!file.type.startsWith('image/')) {
       this.snack.open('Only images are accepted for cover', 'Close', { duration: 3000 });
@@ -162,6 +178,22 @@ export class AdminComponent implements OnInit {
   removeCover() {
     this.cover = undefined;
     this.coverPreview = null;
+  }
+
+  private setSingleCover(file: File) {
+    if (!file.type.startsWith('image/')) {
+      this.snack.open('Only images are accepted for cover', 'Close', { duration: 3000 });
+      return;
+    }
+    this.singleCover = file;
+    const reader = new FileReader();
+    reader.onload = () => this.singleCoverPreview = reader.result;
+    reader.readAsDataURL(file);
+  }
+
+  removeSingleCover() {
+    this.singleCover = undefined;
+    this.singleCoverPreview = null;
   }
 
   // Helper za B64
@@ -237,6 +269,7 @@ export class AdminComponent implements OnInit {
     this.api.createSingle(payload).subscribe({
       next: () => {
         this.snack.open('Single created', 'OK', { duration: 2500 });
+        this.router.navigate(['/home']);
         this.resetSingle();
         this.files = []; this.cover = undefined; this.coverPreview = null;
       },
@@ -322,13 +355,25 @@ export class AdminComponent implements OnInit {
       }).toPromise();
       await this.api.putToS3(presA!.url, f, f.type);
 
+      let imageKey: string | undefined;
+      if (this.singleCover) {
+      const presB = await this.api.getPresignedUrl({
+        bucketType: 'image',
+        fileName: this.singleCover.name,
+        contentType: this.singleCover.type || 'image/jpeg'
+      }).toPromise();
+      await this.api.putToS3(presB!.url, this.singleCover, this.singleCover.type);
+      imageKey = presB!.key;
+      }
+
       tracks.push({
         title: s.title,
         artistIds: s.artistIds,
         artistNames: s.artistNames,
         genres: s.genres,
         trackNo: i + 1,
-        audioKey: presA!.key
+        audioKey: presA!.key,
+        ...(imageKey ? { imageKey } : {})
       });
     }
 
@@ -345,6 +390,7 @@ export class AdminComponent implements OnInit {
     this.api.createAlbum(payload).subscribe({
       next: () => {
         this.snack.open('Album created', 'OK', { duration: 2500 });
+        this.router.navigate(['/home']);
         this.resetAlbum();
         this.albumStep = 0;
         this.albumSingles = [];

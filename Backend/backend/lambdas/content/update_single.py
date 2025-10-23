@@ -19,13 +19,23 @@ FEED_UPDATE_QUEUE_URL = os.environ["FEED_UPDATE_QUEUE_URL"]
 NEW_CONTENT_TOPIC_ARN = os.environ["NEW_CONTENT_TOPIC_ARN"]
 
 singles_table = ddb.Table(SINGLES_TABLE)
-
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            # Proverava da li je Decimal ceo broj
+            if obj % 1 == 0:
+                return int(obj)
+            else:
+                return float(obj)
+        # Ako nije Decimal, koristi standardnu serijalizaciju
+        return super(DecimalEncoder, self).default(obj)
 def cors():
     return {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token",
         "Access-Control-Allow-Methods": "OPTIONS,GET,PUT,POST,DELETE"
     }
+    
 def _construct_audio_url(audio_key):
     """Konstruiše puni javni URL za audio fajl."""
     if not audio_key:
@@ -177,30 +187,26 @@ def handler(event, _):
         
         full_audio_url = old_audio_key
         if current_audio_key != old_audio_key:
-            full_audio_url = _construct_audio_url(current_audio_key) # kriticnoo
+            full_audio_url = _construct_audio_url(current_audio_key) 
             update_parts.append("audioKey = :ak")
-            expression_attribute_values[':ak'] = current_audio_key
-            # expression_attribute_values[':ak'] = full_audio_url PRE RADILO OVO
+            expression_attribute_values[':ak'] = full_audio_url 
         
         update_parts.append("updatedAt = :u")
         expression_attribute_values[':u'] = datetime.datetime.now().isoformat()       
         
         remove_expression = ""
         #PROBLEM
-        full_image_url = old_image_key
+        #full_image_url = old_image_key
+        full_image_url = _construct_image_url(current_image_key) 
         
         if current_image_key!=old_image_key:
             # Slika postoji (bilo stara, bilo nova)
-            full_image_url = _construct_image_url(current_image_key)
+            #full_image_url = _construct_image_url(current_image_key)
             update_parts.append("imageKey = :ik")
-            expression_attribute_values[':ik'] = current_image_key
-            # expression_attribute_values[':ik'] = full_image_url RADILO
+            #expression_attribute_values[':ik'] = current_image_key
+            expression_attribute_values[':ik'] = full_image_url #RADILO
             
-        # elif old_image_key and current_image_key is None:
-        #     remove_expression = " REMOVE imageKey"
-     
         if not update_parts and not remove_expression:
-            # Dodajemo barem updatedAt da bi izraz bio validan
             if not update_parts:
                 update_parts.append("updatedAt = :u")
 
@@ -233,8 +239,8 @@ def handler(event, _):
         
         if full_image_url:
             final_new_content['imageKey'] = full_image_url
-        elif 'imageKey' in final_new_content:
-            del final_new_content['imageKey']
+        # elif 'imageKey' in final_new_content:
+        #     del final_new_content['imageKey']        PROVERI OVO
             
         final_new_content['updatedAt'] = expression_attribute_values[':u']
         
@@ -249,8 +255,8 @@ def handler(event, _):
         lambda_client.invoke(
             FunctionName=UPDATE_FILTER_LAMBDA,
             InvocationType="Event", # Asinhroni poziv
-            Payload=json.dumps(payload_filter)
-        )
+            Payload=json.dumps(payload_filter, cls=DecimalEncoder))
+        
         print("Pozvana UPDATE_FILTER_LAMBDA")
 
         # B. Ažuriranje Feed-a (šaljemo poruku u SQS red)
@@ -263,7 +269,7 @@ def handler(event, _):
         }
         sqs_client.send_message(
             QueueUrl=FEED_UPDATE_QUEUE_URL,
-            MessageBody=json.dumps(payload_feed)
+            MessageBody=json.dumps(payload_feed, cls=DecimalEncoder)
         )
         print("Poslata poruka u SQS za ažuriranje Feed-a")
 
@@ -281,7 +287,7 @@ def handler(event, _):
             }
             sns.publish(
                 TopicArn=NEW_CONTENT_TOPIC_ARN,
-                Message=json.dumps({'default': json.dumps(sns_message)}),
+                Message=json.dumps({'default': json.dumps(sns_message, cls=DecimalEncoder)}),
                 MessageStructure='json'
             )
             print(f"Published SNS message for single update {singleId}")

@@ -35,7 +35,11 @@ export class SongViewComponent {
     const navigation = this.router.getCurrentNavigation();
     this.songId = navigation?.extras?.state?.['songId'];
     console.log(this.songId)
-    this.auth.getUserRole().subscribe(r => this.isAdmin = (r === 'Admin' || r === 'ADMIN'));
+    this.auth.getUserRole().subscribe(r => {
+    console.log('Dobijena korisnička uloga (Role):', r); // Loguje samo ulogu
+    this.isAdmin = (r === 'Admin' || r === 'ADMIN');
+  });
+    //this.auth.getUserRole().subscribe(r => this.isAdmin = (r === 'Admin' || r === 'ADMIN'));
   }
 
   async ngOnInit() {

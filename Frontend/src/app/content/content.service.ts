@@ -66,8 +66,13 @@ export class ContentService {
   }
   updateArtist(fd: FormData){ return this.httpClient.put(`${environment.apiUrl}/artists`, fd); } // ili PUT /api/artists/{id}
   
-  updateAlbum(fd: FormData){ return this.httpClient.put(`${environment.apiUrl}/albums`, fd); }       // ili PUT /api/albums/{id}
-
+  updateAlbum(albumId: string, payload: any): Observable<any> {
+    return this.httpClient.put(
+        `${environment.apiUrl}/albums/${albumId}`, 
+        payload,
+        { headers: { 'Content-Type': 'application/json' } } 
+    );
+}
   updateSingle(singleId: string, payload: any): Observable<any> {
      return this.httpClient.put(
      `${environment.apiUrl}/singles/${singleId}`, 

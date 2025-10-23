@@ -25,15 +25,6 @@
       <mat-error *ngIf="form.get('artistIds')?.invalid && form.get('artistIds')?.touched">Required</mat-error>
     </mat-form-field>
 
-     <!-- <div class="dropzone audio-dropzone" (click)="audioFileInput.click()">
-     <input #audioFileInput type="file" accept="audio/*" (change)="onAudioFile($event)" hidden>
-       <div class="dz-inner">
-         <mat-icon>audiotrack</mat-icon>
-         <p>Click to replace song file (optional)</p>
-       </div>
-    </div>
-    <p *ngIf="audioFile" class="file-name">Selected audio file: {{ audioFile.name }}</p> -->
-
     <div class="dropzone" (click)="coverInput.click()">
       <input #coverInput type="file" accept="image/*" (change)="onCover($event)" hidden>
       <div class="dz-inner">
@@ -42,7 +33,24 @@
       </div>
     </div>
     <p *ngIf="cover" class="file-name">{{ cover.name }}</p>
+    
+    <div class="songs-list-container">
+        <h3>Songs in this Album ({{ albumSongs.length }})</h3>
 
+        <div *ngIf="songsLoading" class="loading-indicator">
+            <mat-spinner diameter="24"></mat-spinner> Loading songs...
+        </div>
+
+        <p *ngIf="!songsLoading && albumSongs.length === 0" class="no-songs-msg">
+            No songs found for this album.
+        </p>
+
+        <div *ngIf="!songsLoading && albumSongs.length > 0" class="songs-grid">
+            <div *ngFor="let song of albumSongs">
+                <app-card [song]="song"></app-card>
+            </div>
+        </div>
+    </div> 
     <div class="actions">
       <button mat-stroked-button type="button" (click)="cancel()">Cancel</button>
       <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid">Save</button>
