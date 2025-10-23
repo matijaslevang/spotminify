@@ -10,6 +10,7 @@ from aws_cdk import (
     aws_sqs as sqs,
     aws_dynamodb as dynamodb,
     aws_s3 as s3,
+    aws_s3_notifications as s3n,
     aws_lambda_event_sources as lambda_event_sources,
     custom_resources as cr,
     aws_sns as sns,
@@ -39,7 +40,18 @@ class BackendStack(Stack):
             self, "UpdateFeedSpecificUserQueue",
             removal_policy=RemovalPolicy.DESTROY
         )
-        
+
+        transcription_queue = sqs.Queue(
+            self, "TranscriptionQueue",
+            removal_policy=RemovalPolicy.DESTROY
+        )
+
+        vosk_layer = _lambda.LayerVersion(
+            self, "VoskLambdaLayer",
+            code=_lambda.Code.from_asset("backend/lambda_layers"),
+            compatible_runtimes=[_lambda.Runtime.PYTHON_3_9],
+        )
+
         self.user_pool = cognito.UserPool(
             self, "MyNewUserPool",
             self_sign_up_enabled=True,
@@ -95,6 +107,12 @@ class BackendStack(Stack):
             self, "Activity",
             partition_key=dynamodb.Attribute(name="username", type=dynamodb.AttributeType.STRING),
             sort_key=dynamodb.Attribute(name="accessTime", type=dynamodb.AttributeType.STRING),  # store datetime as ISO string
+            removal_policy=RemovalPolicy.DESTROY
+        )
+
+        table_transcriptions = dynamodb.Table(
+            self, "Transcriptions",
+            partition_key=dynamodb.Attribute(name="singleId", type=dynamodb.AttributeType.STRING),
             removal_policy=RemovalPolicy.DESTROY
         )
 
@@ -930,6 +948,7 @@ class BackendStack(Stack):
                 "FILTER_ADD_LAMBDA": filter_add_lambda.function_name,
                 "NEW_CONTENT_TOPIC_ARN": new_content_topic.topic_arn,
                 "QUEUE_URL": update_feed_added_content_queue.queue_url,
+                "TRANSCRIBE_QUEUE_URL": transcription_queue.queue_url,
             },
             #log_retention=logs.RetentionDays.ONE_WEEK
         )
@@ -950,6 +969,7 @@ class BackendStack(Stack):
                 "FILTER_ADD_LAMBDA": filter_add_lambda.function_name,
                 "NEW_CONTENT_TOPIC_ARN": new_content_topic.topic_arn,
                 "QUEUE_URL": update_feed_added_content_queue.queue_url,
+                "TRANSCRIBE_QUEUE_URL": transcription_queue.queue_url,
             },
             #log_retention=logs.RetentionDays.ONE_WEEK
         )
@@ -1226,6 +1246,30 @@ class BackendStack(Stack):
 
         update_feed_specific_user_lambda.add_event_source(
             lambda_event_sources.SqsEventSource(update_feed_specific_user_queue)
+        )
+
+        transcribe_lambda = _lambda.Function(
+            self, "TranscribeLambda",
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            handler="transcribe.handler",
+            code=_lambda.Code.from_asset("backend/lambdas/transcribe"),
+            memory_size=2048,
+            timeout=Duration.minutes(5),
+            layers=[vosk_layer],
+            environment={
+                "AUDIO_BUCKET": audio_bucket.bucket_name,
+                "TRANSCRIPTION_TABLE": table_transcriptions.table_name,
+            }
+        )
+        audio_bucket.grant_read(transcribe_lambda)
+        table_transcriptions.grant_write_data(transcribe_lambda)
+
+        transcription_queue.grant_consume_messages(transcribe_lambda)
+        transcription_queue.grant_send_messages(create_single_lambda)
+        transcription_queue.grant_send_messages(create_album_lambda)
+
+        transcribe_lambda.add_event_source(
+            lambda_event_sources.SqsEventSource(transcription_queue)
         )
 
 
