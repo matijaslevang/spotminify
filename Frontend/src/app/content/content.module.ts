@@ -21,6 +21,7 @@ import { UpdateAlbumComponent } from './album/update-album/update-album.componen
 import { UpdateArtistComponent } from './artist/update-artist/update-artist.component';
 import { UpdateSongComponent } from './song/update-song/update-song.component';
 import { MatDialogModule } from '@angular/material/dialog';
+import { TranscriptDialogComponent } from './transcript-dialog/transcript-dialog.component';
 
 @NgModule({
   declarations: [
@@ -34,7 +35,8 @@ import { MatDialogModule } from '@angular/material/dialog';
     RateContentComponent,
     UpdateAlbumComponent,
     UpdateArtistComponent,
-    UpdateSongComponent
+    UpdateSongComponent,
+    TranscriptDialogComponent
   ],
   exports: [
     SongCardComponent,

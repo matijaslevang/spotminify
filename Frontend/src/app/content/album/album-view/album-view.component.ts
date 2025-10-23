@@ -6,6 +6,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { AuthService } from '../../../auth/auth.service';
 import { UpdateAlbumComponent } from '../update-album/update-album.component';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { TranscriptDialogComponent } from '../../transcript-dialog/transcript-dialog.component';
 @Component({
   selector: 'app-album-view',
   templateUrl: './album-view.component.html',
@@ -28,7 +29,9 @@ export class AlbumViewComponent {
   isPlaying = false;
   isAdmin = false;
 
-  constructor(private contentService: ContentService, private snackBar: MatSnackBar,private router: Router,private auth: AuthService, private dialog: MatDialog) {
+  constructor(private contentService: ContentService, private snackBar: MatSnackBar,private router: Router,private auth: AuthService, private dialog: MatDialog,
+    private transcriptDialog: MatDialog
+  ) {
     const navigation = this.router.getCurrentNavigation();
     this.albumId = navigation?.extras?.state?.['albumId'];
     console.log(this.albumId)
@@ -82,5 +85,12 @@ export class AlbumViewComponent {
       }
     })
     this.snackBar.open(`Thanks for rating ${this.album.title}: ${value}/5`, 'Close', { duration: 2500 });
+  }
+
+  openTranscriptDialog(singleId: string) {
+    const ref = this.transcriptDialog.open(TranscriptDialogComponent, {
+      width: '720px',
+      data: { singleId: singleId } 
+    });
   }
 }
