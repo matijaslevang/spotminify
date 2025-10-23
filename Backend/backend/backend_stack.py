@@ -91,20 +91,6 @@ class BackendStack(Stack):
             topic_name="new-content-topic"
         )
 
-        table_activity = dynamodb.Table(
-            self, "Activity",
-            partition_key=dynamodb.Attribute(name="username", type=dynamodb.AttributeType.STRING),
-            sort_key=dynamodb.Attribute(name="accessTime", type=dynamodb.AttributeType.STRING),  # store datetime as ISO string
-            removal_policy=RemovalPolicy.DESTROY
-        )
-
-        # table_ratings = dynamodb.Table(
-        #     self, "Ratings",
-        #     partition_key=dynamodb.Attribute(name="username", type=dynamodb.AttributeType.STRING),
-        #     sort_key=dynamodb.Attribute(name="contentId", type=dynamodb.AttributeType.STRING),
-        #     removal_policy=RemovalPolicy.DESTROY
-        # )
-        # 1. Tabela za ocene
         table_ratings = dynamodb.Table(
             self, "Ratings",
             partition_key=dynamodb.Attribute(name="contentId", type=dynamodb.AttributeType.STRING),
@@ -140,24 +126,13 @@ class BackendStack(Stack):
             removal_policy=RemovalPolicy.DESTROY
         )
 
-        # contentTable = dynamodb.Table.from_table_name(
-        #     self, "content-imported",
-        #     "content"
-        # )
-
         table_genres = dynamodb.Table(
             self, "Genres",
             partition_key=dynamodb.Attribute(name="genreId", type=dynamodb.AttributeType.STRING),
             removal_policy=RemovalPolicy.DESTROY
         )
 
-        # table_albums = dynamodb.Table(
-        #     self, "Albums",
-        #     partition_key=dynamodb.Attribute(name="albumId", type=dynamodb.AttributeType.STRING),
-        #     #partition_key=dynamodb.Attribute(name="artistId", type=dynamodb.AttributeType.STRING),
-        #     #sort_key=dynamodb.Attribute(name="albumId", type=dynamodb.AttributeType.STRING),
-        #     removal_policy=RemovalPolicy.DESTROY
-        # )
+        
         table_albums = dynamodb.Table(self, "Albums",
             # Primarni ključ je sada Composite (PK: artistId, SK: albumId)
             partition_key=dynamodb.Attribute(name="artistId", type=dynamodb.AttributeType.STRING),
@@ -165,21 +140,12 @@ class BackendStack(Stack):
             removal_policy=RemovalPolicy.DESTROY
         )
         
-        # table_singles = dynamodb.Table(
-        #     self, "Singles",
-        #     partition_key=dynamodb.Attribute(name="singleId", type=dynamodb.AttributeType.STRING),
-        #     #partition_key=dynamodb.Attribute(name="artistId", type=dynamodb.AttributeType.STRING),
-        #     #sort_key=dynamodb.Attribute(name="singleId", type=dynamodb.AttributeType.STRING),
-        #     removal_policy=RemovalPolicy.DESTROY
-        # )
         table_singles = dynamodb.Table(self, "Singles",
             # Primarni ključ je sada Composite (PK: artistId, SK: singleId)
             partition_key=dynamodb.Attribute(name="artistId", type=dynamodb.AttributeType.STRING),
             sort_key=dynamodb.Attribute(name="singleId", type=dynamodb.AttributeType.STRING),
             removal_policy=RemovalPolicy.DESTROY
         )
-        # NAPOMENA: Ako ste ranije imali GSI na SinglesTable gde je PK bio 'artistId',
-        # sada taj GSI možete da uklonite! (Novi primarni ključ ga zamenjuje)
         
         table_singles.add_global_secondary_index(
             index_name="by-album-id",
@@ -351,9 +317,6 @@ class BackendStack(Stack):
         artist_bucket.grant_put(create_artist_lambda)
         table_artists.grant_write_data(create_artist_lambda)
 
-
-        # API Gateway
-        #api = apigw.RestApi(self, "MyApi")
         api = apigw.RestApi(
             self, "MyApi",
             default_cors_preflight_options=apigw.CorsOptions(

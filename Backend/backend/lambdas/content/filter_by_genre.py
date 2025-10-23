@@ -1,10 +1,21 @@
 import json
 import os
 import boto3
+from decimal import Decimal
 
 dynamodb = boto3.resource('dynamodb')
 table_name = os.environ['GENRE_INDEX_TABLE']
 table = dynamodb.Table(table_name)
+
+def custom_json_serializer(obj):
+    if isinstance(obj, Decimal):
+        if obj % 1 == 0:
+            return int(obj)
+        else:
+            return float(obj)
+    if isinstance(obj, set):
+        return list(obj)
+    raise TypeError("Type %s not serializable" % type(obj))
 
 def handler(event, context):
     genre_name = event['queryStringParameters']['genreName']
@@ -37,7 +48,7 @@ def handler(event, context):
             'resultAlbums': result_albums,
             'resultArtists': result_artists,
             'resultSongs': result_songs
-        })
+        }, default=custom_json_serializer)
     }
 
 def cors_headers():

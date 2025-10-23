@@ -74,12 +74,13 @@ def handler(event, context):
                 )
                 user_feed = response.get("Items", [])
                 filtered_feed = [item for item in user_feed if item["contentType"] == message["contentType"]]
-                
+                element_number = 10
+
                 if filtered_feed:
                 # 5. add to feed if it has enough score
                     lowest = min(filtered_feed, key=lambda x: x["score"])
                 
-                    if lowest["score"] < song_score:
+                    if lowest["score"] < song_score and len(filtered_feed) == element_number:
                         
                         # delete lowest score song from user's feed
                         table_feed_cache.delete_item(

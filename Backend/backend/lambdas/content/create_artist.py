@@ -65,19 +65,6 @@ def handler(event, context):
             Item=item
         )
 
-        payload = {
-            "contentId": artist_id,
-            "contentType": "artist",
-            "contentName": name,
-            "imageUrl": image_url,
-            "contentGenres": genres,
-        }
-        lambda_client.invoke(
-            FunctionName=FILTER_ADD_LAMBDA,
-            InvocationType="Event",
-            Payload=json.dumps(payload)
-        )
-
         content = {
             "artistId": artist_id,
             "name": name,
@@ -85,6 +72,18 @@ def handler(event, context):
             "genres": genres,
             "imageUrl": image_url
         }
+
+        payload_filter = {
+            "contentId": artist_id,
+            "contentType": "artist",
+            "content": content,
+        }
+        lambda_client.invoke(
+            FunctionName=FILTER_ADD_LAMBDA,
+            InvocationType="Event",
+            Payload=json.dumps(payload_filter)
+        )
+        
         print("send message")
         payload_feed = {
             "content": content,
@@ -92,7 +91,6 @@ def handler(event, context):
             "contentType": "artist",
             "genres": json.dumps(list(genres))
         }
-        print("send message")
         sqs_client.send_message(
             QueueUrl=queue_url,
             MessageBody=json.dumps(payload_feed)

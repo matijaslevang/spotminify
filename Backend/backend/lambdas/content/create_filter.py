@@ -11,10 +11,7 @@ def handler(event, context):
     
     content_id = body.get('contentId')
     content_type = body.get('contentType')
-    content_name = body.get('contentName')
-    image_url = body.get('imageUrl')
-    content_genres = body.get('contentGenres', [])
-    content_artists = body.get('contentArtists', [])
+    content = body.get('content')
     
     content_key = f"{content_type}-{content_id}"
 
@@ -22,20 +19,19 @@ def handler(event, context):
         'contentKey': content_key,
         'contentId': content_id,
         'contentType': content_type,
-        'contentName': content_name,
-        'imageUrl': image_url,
-        'contentGenres': content_genres,
-        'contentArtists': content_artists
+        'content': content,
     }
+
+    content_genres = content['genres']
 
     if content_type == 'artist':
         for genre in content_genres:
             genre_item = item.copy()
-            genre_item.pop("contentArtists")
             genre_item['genreName'] = genre
             genre_index_table.put_item(Item=genre_item)
     
     elif content_type in ['single', 'album']:
+        content_artists = content['artistIds']
         for genre in content_genres:
             genre_item = item.copy()
             genre_item['genreName'] = genre

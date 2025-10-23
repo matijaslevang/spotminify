@@ -45,7 +45,7 @@ export class ArtistViewComponent implements OnInit {
   openEditArtist(){
     const ref = this.dialog.open(UpdateArtistComponent, {
       width: '720px',
-      data: { artist: this.artist, availableGenres: this.artistSongs } // prosledi šta već imaš
+      data: { artist: this.artist, availableGenres: this.artist.genres } 
     });
     ref.afterClosed().subscribe(saved => { if (saved) this.loadArtistData(this.artist.name); });
   }
@@ -54,8 +54,6 @@ export class ArtistViewComponent implements OnInit {
     this.contentService.getArtist(artistId).subscribe({
       next: (artist: Artist) => {
         this.artist = artist;
-        // Will be changed
-        this.loadContentForArtist(artist.name); 
         this.isLoading = false;
       },
       error: (err) => {
@@ -64,14 +62,13 @@ export class ArtistViewComponent implements OnInit {
         this.router.navigate(['/discover']);
       }
     });
-  }
-  loadContentForArtist(artistName: string): void {
-    this.contentService.getSongsByArtist(artistName).subscribe(songs => {
-      this.artistSongs = songs || [];
-    });
-    this.contentService.getAlbumsByArtist(artistName).subscribe(albums => {
-      this.artistAlbums = albums || [];
-    });
+    this.contentService.getFilteredContentByArtist(this.artistId).subscribe({
+      next: (response: any) => {
+        console.log(response)
+        this.artistAlbums = response.resultAlbums.map((item: any) => item.content);
+        this.artistSongs = response.resultSongs.map((item: any) => item.content);
+      }
+    })
   }
 
   loadMySubscriptions(): void {

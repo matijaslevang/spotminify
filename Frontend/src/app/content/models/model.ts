@@ -17,6 +17,7 @@ export interface Song {
     audioKey: string,
     averageRating?: number | null; 
     ratingCount?: number;
+    artistNames: string[],
 }
 
 export interface Album {
@@ -27,6 +28,7 @@ export interface Album {
     coverKey: string,
     averageRating?: number | null; 
     ratingCount?: number;
+    artistNames: string[],
 }
 
 export interface Genre {

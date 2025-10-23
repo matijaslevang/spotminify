@@ -43,7 +43,7 @@
             <h2 *ngIf="resultArtists.length === 0" class="center gray">No artists found for this genre</h2>
             <div *ngIf="resultArtists.length > 0" class="scrollable">
                 <div *ngFor="let artist of resultArtists">
-                    <app-artist-card [filterDetails]="artist" ></app-artist-card>
+                    <app-artist-card [artist]="artist" ></app-artist-card>
                 </div>
             </div>
         </div>
@@ -53,7 +53,7 @@
             <h2 *ngIf="resultSongs.length === 0" class="center gray">No songs found for this genre</h2>
             <div *ngIf="resultSongs.length > 0" class="scrollable">
                 <div *ngFor="let song of resultSongs">
-                    <app-song-card [filterDetails]="song"></app-song-card>
+                    <app-song-card [song]="song"></app-song-card>
                 </div>
             </div>
         </div>
@@ -62,7 +62,7 @@
             <h2 *ngIf="resultAlbums.length === 0" class="center gray">No albums found for this genre</h2>
             <div *ngIf="resultAlbums.length > 0" class="scrollable">
                 <div *ngFor="let album of resultAlbums">
-                    <app-album-card [filterDetails]="album"></app-album-card>
+                    <app-album-card [album]="album"></app-album-card>
                 </div>
             </div>
         </div>

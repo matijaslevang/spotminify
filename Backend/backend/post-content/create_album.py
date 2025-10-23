@@ -36,6 +36,7 @@ def handler(event, _):
 
         title     = (data.get("title") or data.get("ContentName") or "").strip()
         artistIds = data.get("artistIds") or data.get("Artists") or []
+        artistNames = data.get("artistNames") or []
         genres    = data.get("genres")    or data.get("Genres")  or []
         coverKey  = data.get("coverKey")
         tracks    = data.get("tracks") or []
@@ -56,6 +57,7 @@ def handler(event, _):
             "albumId":   {"S": albumId},           # <--- Sort Key za ALBUMS_TABLE
             "title":     {"S": title},
             "artistIds": {"SS": artistIds} if artistIds else {"SS":[]},
+            "artistNames": {"SS": artistNames} if artistNames else {"SS":[]},
             "genres":    {"SS": genres}    if genres    else {"SS":[]},
             "createdAt": {"S": now},
         }
@@ -65,36 +67,34 @@ def handler(event, _):
      
         ddb.put_item(TableName=ALBUMS_TABLE, Item=album)
 
-        payload = {
-            "contentId": albumId,
-            "contentType": "album",
-            "contentName": title,
-            "imageUrl": f"https://{IMAGES_BUCKET}.s3.amazonaws.com/{coverKey}",
-            "contentGenres": genres,
-            "contentArtists": artistIds # TODO check this stuff out
-        }
-        lambda_client.invoke(
-            FunctionName=FILTER_ADD_LAMBDA,
-            InvocationType="Event",
-            Payload=json.dumps(payload)
-        )
-
         content = {
             "artistId":  pk_artist_id,      
             "albumId":   albumId,           
             "title":     title,
             "artistIds":  artistIds if artistIds else [],
+            "artistNames": artistNames if artistNames else [],
             "genres":     genres    if genres   else [],
             "createdAt": now,
         }
         if coverKey:
             content["coverKey"] = f"https://{IMAGES_BUCKET}.s3.amazonaws.com/{coverKey}"
 
+        payload_filter = {
+            "contentId": albumId,
+            "contentType": "album",
+            "content": content,
+        }
+        lambda_client.invoke(
+            FunctionName=FILTER_ADD_LAMBDA,
+            InvocationType="Event",
+            Payload=json.dumps(payload_filter)
+        )
+
         payload_feed = {
             "content": content,
             "contentId": albumId,
             "contentType": "album",
-            "genres": json.dumps(list(genres))
+            "genres": json.dumps(list(genres)),
         }
         print("send message")
         sqs_client.send_message(
@@ -108,6 +108,7 @@ def handler(event, _):
             stitle  = (t.get("title") or "").strip() or "Track"
             sgenres = t.get("genres")    or []
             sarts   = t.get("artistIds") or artistIds
+            sartNames = t.get("artistNames") or artistNames
             akey    = t.get("audioKey")
             trno    = t.get("trackNo")
             ikey    = t.get("imageKey")
@@ -125,6 +126,7 @@ def handler(event, _):
                 "singleId":  {"S": singleId},            # <--- Sort Key za SINGLES_TABLE
                 "title":     {"S": stitle},
                 "artistIds": {"SS": sarts}  if sarts  else {"SS":[]},
+                "artistNames": {"SS": sartNames} if sartNames else {"SS":[]},
                 "genres":    {"SS": sgenres}if sgenres else {"SS":[]},
                 "audioKey":  {"S": f"https://{AUDIO_BUCKET}.s3.amazonaws.com/{akey}"},
                 "albumId":   {"S": albumId},
@@ -135,25 +137,13 @@ def handler(event, _):
 
             ddb.put_item(TableName=SINGLES_TABLE, Item=item)
             created.append({"singleId": singleId, "trackNo": trno})
-            payload = {
-                "contentId": singleId,
-                "contentType": "single",
-                "contentName": stitle,
-                "imageUrl": f"https://{IMAGES_BUCKET}.s3.amazonaws.com/{ikey}",
-                "contentGenres": sgenres,
-                "contentArtists": sarts # TODO check this stuff out
-            }
-            lambda_client.invoke(
-                FunctionName=FILTER_ADD_LAMBDA,
-                InvocationType="Event",
-                Payload=json.dumps(payload)
-            )
 
             content_single = {
                 "artistId":  single_pk_artist_id,
                 "singleId":  singleId,           
                 "title":     stitle,
                 "artistIds": sarts if sarts  else [],
+                "artistNames": sartNames if sartNames else [],
                 "genres":    sgenres if sgenres else [],
                 "audioKey":  f"https://{AUDIO_BUCKET}.s3.amazonaws.com/{akey}",
                 "albumId":   albumId,
@@ -161,11 +151,23 @@ def handler(event, _):
             }
             if trno is not None: content_single["trackNo"] = int(trno)
             if ikey: content_single["imageKey"] = f"https://{IMAGES_BUCKET}.s3.amazonaws.com/{ikey}"
+
+            payload_filter_single = {
+                "contentId": singleId,
+                "contentType": "single",
+                "content": content_single,
+            }
+            lambda_client.invoke(
+                FunctionName=FILTER_ADD_LAMBDA,
+                InvocationType="Event",
+                Payload=json.dumps(payload_filter_single)
+            )
+
             payload_feed_two = {
                 "content": content_single,
                 "contentId": singleId,
                 "contentType": "single",
-                "genres": json.dumps(list(sgenres))
+                "genres": json.dumps(list(sgenres)),
             }
             print("send message")
             sqs_client.send_message(
@@ -179,6 +181,7 @@ def handler(event, _):
                     'contentId': albumId,
                     'title': title,
                     'artistIds': artistIds, 
+                    'artistNames': sartNames,
                     'genres': genres
                 }
                 sns.publish(
