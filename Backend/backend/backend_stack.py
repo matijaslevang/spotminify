@@ -889,12 +889,13 @@ class BackendStack(Stack):
             timeout=Duration.seconds(45), # Još duže vreme zbog višestrukog kaskadnog brisanja
             environment={
                 "ARTISTS_TABLE": table_artists.table_name,
-                "ALBUMS_TABLE": table_albums.table_name,
-                "SINGLES_TABLE": table_singles.table_name,
-                "AUDIO_BUCKET": audio_bucket.bucket_name,
                 "IMAGES_BUCKET": images_bucket.bucket_name,
                 "GENRE_INDEX_TABLE": table_genre_index.table_name,
                 "ARTIST_INDEX_TABLE": table_artist_index.table_name,
+                "SUBSCRIPTIONS_TABLE": table_subscriptions.table_name,
+                "SUBSCRIPTIONS_GSI_NAME": "by-target-id",
+                "FEED_CACHE_TABLE": table_feed_cache.table_name,
+                "FEED_CACHE_GSI": "by-content-id"
             }
         )
 
@@ -903,34 +904,27 @@ class BackendStack(Stack):
         # A. Dozvole za ARTISTS tabelu (Read/Write)
         table_artists.grant_read_data(delete_artist_lambda)
         table_artists.grant_write_data(delete_artist_lambda)
-        
-        # B. Dozvole za ALBUMS tabelu (Read/Query i Write/Delete)
-        table_albums.grant_read_data(delete_artist_lambda)
-        table_albums.grant_write_data(delete_artist_lambda)
-        # Query na Albums GSI (za albume tog umetnika)
-        delete_artist_lambda.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=["dynamodb:Query"],
-                resources=[f"{table_albums.table_arn}/index/*"] 
-            )
-        )
-        
-        # C. Dozvole za SINGLES tabelu (Read/Query i Write/Delete)
-        table_singles.grant_read_data(delete_artist_lambda) 
-        table_singles.grant_write_data(delete_artist_lambda)
-        # Query na Singles GSI (za singlove tog umetnika)
-        delete_artist_lambda.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=["dynamodb:Query"],
-                resources=[f"{table_singles.table_arn}/index/*"] 
-            )
-        )
 
         # D. Dozvole za S3, Indekse
         images_bucket.grant_delete(delete_artist_lambda)
         audio_bucket.grant_delete(delete_artist_lambda)
         table_genre_index.grant_write_data(delete_artist_lambda)
         table_artist_index.grant_write_data(delete_artist_lambda)
+        artist_bucket.grant_delete(delete_artist_lambda)
+        table_feed_cache.grant_read_write_data(delete_artist_lambda)
+        delete_artist_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["dynamodb:Query"],
+                resources=[f"{table_feed_cache.table_arn}/index/by-content-id"]
+            )
+        )
+        table_subscriptions.grant_read_write_data(delete_artist_lambda)
+        delete_artist_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["dynamodb:Query"],
+                resources=[f"{table_subscriptions.table_arn}/index/by-target-id"]
+            )
+        )
         
         artist_id_resource = artists.add_resource("{artistId}",
             default_cors_preflight_options=apigw.CorsOptions(
