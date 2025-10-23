@@ -822,12 +822,15 @@ class BackendStack(Stack):
             code=_lambda.Code.from_asset("backend/lambdas/content"),
             timeout=Duration.seconds(30), # Duže vreme, jer radi kaskadno brisanje
             environment={
-                "ALBUMS_TABLE": table_albums.table_name,
+                "ALBUM_TABLE": table_albums.table_name,
                 "SINGLES_TABLE": table_singles.table_name, # Potrebno za brisanje singlova
                 "AUDIO_BUCKET": audio_bucket.bucket_name,
                 "IMAGES_BUCKET": images_bucket.bucket_name,
                 "GENRE_INDEX_TABLE": table_genre_index.table_name,
-                "ARTIST_INDEX_TABLE": table_artist_index.table_name
+                "ARTIST_INDEX_TABLE": table_artist_index.table_name,
+                "FEED_CACHE_TABLE": table_feed_cache.table_name,
+                "SINGLES_GSI": "by-album-id",
+                "FEED_CACHE_GSI": "by-content-id"
             }
         )
 
@@ -843,7 +846,7 @@ class BackendStack(Stack):
         delete_album_lambda.add_to_role_policy(
             iam.PolicyStatement(
                 actions=["dynamodb:Query"],
-                resources=[f"{table_singles.table_arn}/index/*"] # Dozvola za query na svim indeksima
+                resources=[f"{table_singles.table_arn}/index/*"] 
             )
         )
 
@@ -859,6 +862,14 @@ class BackendStack(Stack):
                 allow_methods=["GET", "DELETE", "OPTIONS"],
                 allow_headers=["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key"]
             ))
+        
+        table_feed_cache.grant_read_write_data(delete_album_lambda)
+        delete_album_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["dynamodb:Query"],
+                resources=[f"{table_feed_cache.table_arn}/index/by-content-id"] 
+            )
+        )
 
         # Povezivanje DELETE metode na /albums/{albumId} sa DeleteAlbumLambda
         album_id_resource.add_method(
