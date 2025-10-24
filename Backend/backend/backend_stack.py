@@ -331,7 +331,7 @@ class BackendStack(Stack):
                         s3.HttpMethods.GET,
                         s3.HttpMethods.HEAD,
                     ],
-                    allowed_origins=["http://localhost:4200", "https://d1ket55ktc9yym.cloudfront.net"],
+                    allowed_origins=["http://localhost:4200", "https://d204s22jvvyq8c.cloudfront.net"],
                     allowed_headers=["*"],
                     exposed_headers=["ETag"]
             )]
@@ -686,7 +686,7 @@ class BackendStack(Stack):
                         s3.HttpMethods.GET,
                         s3.HttpMethods.HEAD,
                     ],
-                    allowed_origins=["http://localhost:4200", "https://d1ket55ktc9yym.cloudfront.net"],
+                    allowed_origins=["http://localhost:4200", "https://d204s22jvvyq8c.cloudfront.net"],
                     allowed_headers=["*"],
                     exposed_headers=["ETag"]
                 )
