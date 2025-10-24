@@ -1,0 +1,61 @@
+<div class="artist-card">
+  <h2>Update Artist</h2>
+  <p>Edit artist information</p>
+
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <!-- Name -->
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Artist Name</mat-label>
+      <input matInput formControlName="name" placeholder="Enter artist name" />
+      <mat-error *ngIf="form.get('name')?.invalid && form.get('name')?.touched">
+        Name is required
+      </mat-error>
+    </mat-form-field>
+
+    <!-- Image -->
+    <div class="dropzone" (click)="fileInput.click()">
+      <input #fileInput type="file" accept="image/*" (change)="onFile($event)" />
+      <div class="dz-inner">
+        <mat-icon class="upload-icon">cloud_upload</mat-icon>
+        <p>Click to replace artist image</p>
+        <small>Supported: png, jpeg</small>
+      </div>
+    </div>
+    <p *ngIf="file" class="file-name">Selected file: {{ file.name }}</p>
+
+    <!-- Biography -->
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Biography</mat-label>
+      <textarea
+        matInput
+        rows="5"
+        formControlName="biography"
+        placeholder="Write a short biography"
+      ></textarea>
+      <mat-error *ngIf="form.get('biography')?.invalid && form.get('biography')?.touched">
+        Biography is required
+      </mat-error>
+    </mat-form-field>
+
+    <!-- Genres -->
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Genres</mat-label>
+      <mat-select formControlName="genres" multiple>
+        <mat-option *ngFor="let g of availableGenres" [value]="g.genreId">
+           {{ g.genreName }}
+       </mat-option>
+      </mat-select>
+      <mat-error *ngIf="form.get('genres')?.invalid && form.get('genres')?.touched">
+        At least one genre
+      </mat-error>
+    </mat-form-field>
+
+    <!-- Actions -->
+    <div class="actions">
+      <button mat-stroked-button type="button" (click)="ref.close(false)">Cancel</button>
+      <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid">
+        Save changes
+      </button>
+    </div>
+  </form>
+</div>

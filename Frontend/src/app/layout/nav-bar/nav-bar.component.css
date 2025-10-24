@@ -1,0 +1,43 @@
+.app-toolbar {
+  font-family: "Fira Sans Condensed", sans-serif !important;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+  height: 64px;
+  background-color: var(--color-blush);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.brand-text {
+  color: var(--color-white-smoke);
+  font-weight: 600;
+  font-size: 1.5em;
+  margin-right: 20px;
+  text-decoration: none;
+}
+
+.nav-links a {
+  font-family: "Fira Sans Condensed", sans-serif !important;
+  color: white;
+  text-decoration: none;
+  font-weight: 400;
+}
+
+.nav-links a:hover {
+  color: #ffd1e0;
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.toolbar-actions button {
+  color: white;
+}
+
+.toolbar-actions button:hover {
+  color: #ffd1e0;
+}

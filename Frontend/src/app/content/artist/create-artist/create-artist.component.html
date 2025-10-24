@@ -1,0 +1,60 @@
+<div class="artist-card">
+  <h2>Create Artist</h2>
+  <p>Add information about the new artist</p>
+  <form [formGroup]="formGroup" (ngSubmit)="createArtist()">
+
+    <!-- Artist Name -->
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Artist Name</mat-label>
+      <input matInput formControlName="name" placeholder="Enter artist name">
+      <mat-error *ngIf="formGroup.controls['name'].invalid && formGroup.controls['name'].touched">
+        Name is required
+      </mat-error>
+    </mat-form-field>
+
+   <!-- Image Upload -->
+    <div class="dropzone" (drop)="onDrop($event)" (dragover)="onDragOver($event)">
+        <input type="file" #fileInput accept="image/*" (change)="onFilesSelected($event)">
+        <div class="dz-inner">
+            <mat-icon class="upload-icon">cloud_upload</mat-icon>
+            <p>Drag & drop artist image here or</p>
+            <button type="button" class="btn-primary" (click)="fileInput.click()">Choose files</button>
+            <small>Supported: png, jpeg</small>
+        </div>
+    </div>
+
+    <!-- Name of th euploaded file -->
+    <p *ngIf="uploadedFileName" class="file-name">Selected file: {{ uploadedFileName }}</p>
+    <mat-error *ngIf="imageError">{{ imageError }}</mat-error>
+
+    <!-- Biography -->
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Biography</mat-label>
+      <textarea matInput rows="5" formControlName="biography" placeholder="Write a short biography"></textarea>
+      <mat-error *ngIf="formGroup.controls['biography'].invalid && formGroup.controls['biography'].touched">
+        Biography is required
+      </mat-error>
+    </mat-form-field>
+
+    <!-- Genres (multi-select) -->
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Genres</mat-label>
+      <mat-select formControlName="genres" multiple>
+        <mat-option *ngFor="let genre of availableGenres" [value]="genre.genreName">
+          {{ genre.genreName }}
+        </mat-option>
+      </mat-select>
+      <mat-error *ngIf="formGroup.controls['genres'].invalid && formGroup.controls['genres'].touched">
+        At least one genre is required
+      </mat-error>
+    </mat-form-field>
+
+    <!-- Error -->
+    <p *ngIf="error" class="error-msg">{{ error }}</p>
+
+    <!-- Submit Button -->
+    <button mat-raised-button class="btn-primary" type="submit" [disabled]="formGroup.invalid">
+      Create Artist
+    </button>
+  </form>
+</div>

@@ -1,0 +1,62 @@
+.dialog-card{ max-width:720px; padding:20px 26px; border-radius:12px; background:#fff; box-shadow:0 6px 18px rgba(0,0,0,.12); text-align:center; }
+h2{ margin:0 0 6px; color:#111; }
+p{ margin:0 0 12px; color:#555; }
+/*form{ display:flex; flex-direction:column; gap:14px; width:80%; margin:0 auto; }*/
+.full{ width:100%; }
+.actions{ display:flex; justify-content:center; gap:12px; }
+.dropzone{ border:2px dashed #bbb; border-radius:10px; padding:14px; cursor:pointer; }
+.dropzone:hover{ background:#fafafa; }
+.dz-inner{ display:flex; gap:8px; justify-content:center; align-items:center; color:#555; }
+.file-name{ font-size:.9rem; color:#666; }
+
+
+.dialog-card {
+    max-width: 720px;
+    padding: 20px 26px;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .12);
+    text-align: center;
+    
+    /* 1. KONTROLA VISINE: Ograničite visinu dijaloga da bi se omogućilo skrolovanje */
+    max-height: 85vh; /* Postavite maksimalnu visinu na 85% visine viewporta */
+    display: flex; /* Koristite flexbox za organizaciju sadržaja */
+    flex-direction: column;
+}
+
+/* 2. GLAVNI KONTEJNER: Omogućite skrolovanje unutrašnjosti (forme) */
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    width: 80%;
+    margin: 0 auto;
+    
+    /* Ograničite visinu forme i omogućite skrolovanje (ključno) */
+    flex-grow: 1; /* Dozvolite formi da zauzme sav dostupan prostor */
+    overflow-y: auto; /* GLAVNA IZMENA: Omogućava skrolovanje vertikalno */
+    padding-right: 15px; /* Dodajte padding da kompenzujete skrolbar */
+}
+
+/* 3. FIKSNI AKCIONI BAR: Učinite akciona dugmad uvek vidljivim */
+.actions-bar {
+    /* Novi omotač za akciona dugmad */
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+    background: #fff; /* Osigurajte da bar prekrije sadržaj ispod */
+    position: sticky; /* Ključno: Fiksirajte ga pri dnu */
+    bottom: -26px; /* -26px kompenzuje padding bottom koji je postavljen na .dialog-card */
+    z-index: 10;
+    padding-bottom: 26px;
+    margin-left: -26px; /* Da se razvuče preko celog .dialog-card */
+    margin-right: -26px; /* Da se razvuče preko celog .dialog-card */
+    box-shadow: 0 -4px 12px rgba(0,0,0,.05); /* Lepa senka iznad dugmadi */
+}
+
+.actions { 
+    display: flex; 
+    justify-content: center; 
+    gap: 12px; 
+    /* Uklonite sve druge stilove pozicioniranja odavde */
+}

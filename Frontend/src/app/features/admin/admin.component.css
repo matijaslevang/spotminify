@@ -1,0 +1,54 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  background: #fff;
+}
+
+/* Tabs neutral */
+.tabs { margin-top: 6px; }
+::ng-deep .mat-mdc-tab .mdc-tab__text-label { color: #111 !important; }
+::ng-deep .mat-mdc-tab.mdc-tab--active .mdc-tab__text-label { color: #111 !important; }
+::ng-deep .mat-mdc-tab-indicator .mdc-tab-indicator__content--underline { border-color: #111 !important; }
+
+.snack-error { background: #c62828 !important; color: #fff !important; }
+
+/* Layout */
+.admin-wrap { max-width: 1200px; margin: 0 auto; padding: 32px 16px; }
+.page-head { text-align: center; margin-bottom: 20px; }
+.page-head h2 { color: #111; margin-bottom: 4px; }
+.page-head p { color: #666; }
+
+/* Grid and cards */
+.grid { display: grid; gap: 16px; grid-template-columns: 1fr 1fr; }
+.col { background: #fff; border: 1px solid #e5e5e5; border-radius: 12px; padding: 16px 18px; box-shadow: 0 6px 18px rgba(0,0,0,0.04); }
+
+/* Dropzone */
+.dropzone { border: 2px dashed #aaa; border-radius: 10px; padding: 24px; text-align: center; background: #fafafa; cursor: pointer; }
+.dropzone p { margin-bottom: 8px; color: #666; }
+.dropzone:hover { border-color: #666; }
+
+/* File list */
+.file-list { margin-top: 16px; }
+.file-list table { width: 100%; border-collapse: collapse; }
+.file-list th, .file-list td { padding: 8px; border-bottom: 1px solid #eee; font-size: 14px; text-align: left; }
+.file-list th { font-weight: bold; color: #333; }
+
+/* Cover preview */
+.cover-preview { margin-top: 16px; text-align: center; }
+.cover-preview img { max-width: 100%; max-height: 200px; border-radius: 8px; }
+.cover-preview button { margin-top: 8px; }
+
+/* Rows */
+.row { margin-top: 12px; }
+.row.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.row .full { width: 100%; }
+
+.actions { display: flex; gap: 10px; align-items: center; justify-content: flex-end; }
+.hint { color: #666; font-size: 12px; margin-top: 6px; }
+
+.toggle-row { margin-top: 16px; }
+
+.link { background: none; border: none; cursor: pointer; text-decoration: underline; color: #0066cc; }
+.link:hover { color: #004499; }
+
+@media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }

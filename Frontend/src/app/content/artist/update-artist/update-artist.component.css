@@ -1,0 +1,11 @@
+.artist-card{ max-width:720px; width:100%; padding:20px 30px; border-radius:12px; background:var(--color-white-smoke);
+  box-shadow:0 6px 18px rgba(0,0,0,.12); font-family:"Fira Sans Condensed",sans-serif; text-align:center; }
+.artist-card h2{ color:var(--color-blush); font-size:2em; letter-spacing:1px; margin:0 0 10px; }
+form{ display:flex; flex-direction:column; width:80%; margin:auto; gap:14px; }
+.actions{ display:flex; justify-content:center; gap:12px; margin-top:6px; }
+
+.dropzone{ border:2px dashed var(--color-blush); border-radius:12px; padding:16px; text-align:center; cursor:pointer; transition:.2s; }
+.dropzone:hover{ background:rgba(210,88,134,.08); }
+.dropzone input{ display:none; }
+.upload-icon{ font-size:36px; margin-bottom:6px; color:var(--color-blush); }
+.file-name{ font-size:.9rem; color:#666; margin-top:6px; }

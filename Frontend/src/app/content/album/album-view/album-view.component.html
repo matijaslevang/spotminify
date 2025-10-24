@@ -1,0 +1,38 @@
+<div class="container">
+    <img class="album-image" src={{album.coverKey}} alt={{album.title}} [class.spinning]="isPlaying">
+    <p class="album-name">{{album.title}} by {{album.artistNames.join(', ')}} - {{album.genres}}</p>
+    <br>
+    <div class="average-rating-display">
+        <ng-container *ngIf="album.averageRating !== null && album.ratingCount > 0; else noRating">
+            <span class="rating-value">⭐️ {{ album.averageRating | number:'1.2-2' }}/5</span>
+            <span class="rating-count"> ({{ album.ratingCount }} ratings)</span>
+        </ng-container>
+        <ng-template #noRating>
+            <span class="no-rating-message">Be the first to rate this song!</span>
+        </ng-template>
+    </div>
+    <div class="album-player" *ngFor="let single of albumSingles; let i = index">    
+        <p class="track-artists">
+            {{ i + 1 }} <strong>{{ single.title }}</strong> Artists: {{ single.artistNames?.join(', ') || 'N/A' }}
+        </p>
+        <audio #audioPlayer controls (play)="onPlay(audioPlayer)" (pause)="onPause()" [src]="single.audioKey">
+            Your browser does not support the audio element.
+        </audio>
+        <button mat-button (click)="openTranscriptDialog(single.singleId)">
+            <mat-icon>list</mat-icon> Transcript
+        </button>
+    </div>
+    <br>
+    <app-rate-content
+        [contentType]="'ALBUM'"
+        [contentId]="album.albumId"       
+        buttonLabel="Rate album"
+        (rated)="onAlbumRated($event)">
+    </app-rate-content>
+    <br>
+    <div class="actions-admin" *ngIf="isAdmin">
+        <button mat-raised-button color="primary" (click)="openEditAlbum()">Edit Album</button>
+    </div>
+    <br>
+</div>
+    

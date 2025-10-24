@@ -1,0 +1,37 @@
+<button class="btn-rate" type="button" (click)="open()">
+  ★ {{ buttonLabel }}
+</button>
+
+<ng-template #dialogTpl let-dialogRef="dialogRef">
+  <div class="dlg">
+    <div class="dlg-head">
+      <h3>Rate this content</h3>
+    </div>
+
+    <form (ngSubmit)="submit(dialogRef)">
+      <div class="stars" aria-label="Select rating">
+        <input type="radio" id="star5" name="r" [value]="5" [(ngModel)]="rating">
+        <label for="star5" title="5">★</label>
+
+        <input type="radio" id="star4" name="r" [value]="4" [(ngModel)]="rating">
+        <label for="star4" title="4">★</label>
+
+        <input type="radio" id="star3" name="r" [value]="3" [(ngModel)]="rating">
+        <label for="star3" title="3">★</label>
+
+        <input type="radio" id="star2" name="r" [value]="2" [(ngModel)]="rating">
+        <label for="star2" title="2">★</label>
+
+        <input type="radio" id="star1" name="r" [value]="1" [(ngModel)]="rating">
+        <label for="star1" title="1">★</label>
+      </div>
+
+      <div class="dlg-actions">
+        <button type="button" class="btn-cancel" (click)="dialogRef.close()">Cancel</button>
+        <button type="submit" class="btn-submit" [disabled]="!rating || submitting">
+          {{ submitting ? 'Sending...' : 'Submit' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</ng-template>

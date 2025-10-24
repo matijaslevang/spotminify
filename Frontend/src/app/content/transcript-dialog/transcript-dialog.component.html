@@ -1,0 +1,7 @@
+<div class="container" *ngIf="transcription !== ''">
+    <h2>Transcription</h2>
+    <p>{{transcription}}</p>
+</div>
+<div class="container" *ngIf="transcription === ''">
+    <h2>No transcription is available for this song</h2>
+</div>

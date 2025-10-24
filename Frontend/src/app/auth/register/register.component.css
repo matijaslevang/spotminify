@@ -1,0 +1,66 @@
+:host {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-image: url("/login.jpg");
+}
+.register-card {
+  max-width: 600px;
+  width: 100%;
+  padding: 20px 20px;
+  border-radius: 12px;
+  background: var(--color-white-smoke);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  animation: fadeIn 0.6s ease-in-out;
+  font-family: "Fira Sans Condensed", sans-serif !important;
+  text-align: center;
+}
+
+.register-card h2 {
+  color: var(--color-blush);
+  font-size: 2em;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+
+/* Form */
+.register-card form {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Buttons */
+.register-card button.mat-raised-button {
+  padding: 12px 15px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: none;
+  transition: 0.3s ease;
+}
+
+.register-card button.mat-raised-button:hover {
+  background: var(--color-blush);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(210, 88, 134, 0.4);
+}
+
+/* Links */
+.register-card a {
+  font-size: small;
+}
+
+/* Error message */
+.register-card .error-msg {
+  font-size: small;
+  color: #e53b35;
+  font-weight: 200;
+  margin: 0;
+  padding-bottom: 15px;
+}
+
+/* Animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}

@@ -1,0 +1,59 @@
+<div class="dialog-card">
+  <h2>Edit Album</h2>
+  <p>Update album metadata</p>
+
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <mat-form-field appearance="outline" class="full">
+      <mat-label>Album title</mat-label>
+      <input matInput formControlName="title">
+      <mat-error *ngIf="form.get('title')?.invalid && form.get('title')?.touched">Required</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full">
+      <mat-label>Genres</mat-label>
+      <mat-select formControlName="genres" multiple>
+        <mat-option *ngFor="let g of availableGenres" [value]="g.genreId">{{ g.genreName }}</mat-option>
+      </mat-select>
+      <mat-error *ngIf="form.get('genres')?.invalid && form.get('genres')?.touched">Select at least one</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full">
+      <mat-label>Artists</mat-label>
+      <mat-select formControlName="artistIds" multiple>
+        <mat-option *ngFor="let a of availableArtists" [value]="a.artistId">{{ a.name }}</mat-option>
+      </mat-select>
+      <mat-error *ngIf="form.get('artistIds')?.invalid && form.get('artistIds')?.touched">Required</mat-error>
+    </mat-form-field>
+
+    <div class="dropzone" (click)="coverInput.click()">
+      <input #coverInput type="file" accept="image/*" (change)="onCover($event)" hidden>
+      <div class="dz-inner">
+        <mat-icon>image</mat-icon>
+        <p>Replace cover (optional)</p>
+      </div>
+    </div>
+    <p *ngIf="cover" class="file-name">{{ cover.name }}</p>
+    
+    <div class="songs-list-container">
+        <h3>Songs in this Album ({{ albumSongs.length }})</h3>
+
+        <div *ngIf="songsLoading" class="loading-indicator">
+            <mat-spinner diameter="24"></mat-spinner> Loading songs...
+        </div>
+
+        <p *ngIf="!songsLoading && albumSongs.length === 0" class="no-songs-msg">
+            No songs found for this album.
+        </p>
+
+        <div *ngIf="!songsLoading && albumSongs.length > 0" class="songs-grid">
+            <div *ngFor="let song of albumSongs">
+                <app-card [song]="song"></app-card>
+            </div>
+        </div>
+    </div> 
+    <div class="actions">
+      <button mat-stroked-button type="button" (click)="cancel()">Cancel</button>
+      <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid">Save</button>
+    </div>
+  </form>
+</div>

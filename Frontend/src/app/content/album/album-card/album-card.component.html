@@ -1,0 +1,18 @@
+<div class="card-container">
+  <div class="meta">
+    <img #albumCardImage class="album-card-image" [src]="album.coverKey" [alt]="album.title">
+    <div class="info">
+      <h3 class="album-name">{{ album.title }}</h3>
+      <p class="album-sub">{{ album.artistNames?.join(', ') }} · {{ album.genres?.join(', ') }}</p>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button mat-flat-button class="btn-listen" (click)="viewAlbum()">
+      <mat-icon>play_arrow</mat-icon><span>Listen</span>
+    </button>
+    <button mat-stroked-button class="btn-del" *ngIf="isAdmin" (click)="confirmDelete()">
+      <mat-icon>delete</mat-icon><span>Delete</span>
+    </button>
+  </div>
+</div>
