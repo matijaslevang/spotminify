@@ -51,18 +51,17 @@
       </div>
       <br>
 
-      <h3>Single Images for your album</h3>
+      <!-- <h3>Single Images for your album</h3>
       <div class="dropzone" (dragover)="onDragOver($event)" (drop)="onSingleAlbumCoverDrop($event)">
         <p>Drag & drop cover image here, or</p>
         <button mat-stroked-button color="accent" (click)="singleCoverInput.click()">Browse image</button>
         <input #singleCoverInput type="file" accept="image/*" (change)="onSingleCoverSelected($event)" hidden>
       </div>
 
-      <!-- Cover preview -->
       <div *ngIf="singleCoverPreview" class="cover-preview">
         <img [src]="singleCoverPreview" alt="Cover preview">
         <button class="link" type="button" (click)="removeSingleCover()">Remove</button>
-      </div>
+      </div> -->
       
     </div>
     

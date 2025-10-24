@@ -356,15 +356,16 @@ export class AdminComponent implements OnInit {
       await this.api.putToS3(presA!.url, f, f.type);
 
       let imageKey: string | undefined;
-      if (this.singleCover) {
-      const presB = await this.api.getPresignedUrl({
-        bucketType: 'image',
-        fileName: this.singleCover.name,
-        contentType: this.singleCover.type || 'image/jpeg'
-      }).toPromise();
-      await this.api.putToS3(presB!.url, this.singleCover, this.singleCover.type);
-      imageKey = presB!.key;
-      }
+      imageKey = coverKey
+      // if (this.singleCover) {
+      // const presB = await this.api.getPresignedUrl({
+      //   bucketType: 'image',
+      //   fileName: this.singleCover.name,
+      //   contentType: this.singleCover.type || 'image/jpeg'
+      // }).toPromise();
+      // await this.api.putToS3(presB!.url, this.singleCover, this.singleCover.type);
+      // imageKey = presB!.key;
+      // }
 
       tracks.push({
         title: s.title,
