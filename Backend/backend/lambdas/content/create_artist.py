@@ -14,10 +14,9 @@ TABLE = os.environ["TABLE_NAME"]
 FILTER_ADD_LAMBDA = os.environ["FILTER_ADD_LAMBDA"]
 queue_url = os.environ["QUEUE_URL"]
 
-artist_id = str(uuid.uuid4())
-
 def handler(event, context):
     try:
+        artist_id = str(uuid.uuid4())
         claims = event.get("requestContext", {}).get("authorizer", {}).get("claims", {})
         role = claims.get("custom:role", "")
         if role != "Admin":
