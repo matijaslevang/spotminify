@@ -194,16 +194,16 @@ class BackendStack(Stack):
             removal_policy=RemovalPolicy.DESTROY
         )
         # ----------- NOV GSI ----------
-        # table_singles.add_global_secondary_index(
-        #     index_name="SingleIdIndex",
-        #     partition_key=dynamodb.Attribute(name="singleId", type=dynamodb.AttributeType.STRING),
-        #     projection_type=dynamodb.ProjectionType.ALL
-        # )
-        # table_albums.add_global_secondary_index(
-        #     index_name="AlbumIdIndex", 
-        #     partition_key=dynamodb.Attribute(name="albumId", type=dynamodb.AttributeType.STRING),
-        #     projection_type=dynamodb.ProjectionType.ALL  
-        # )
+        table_singles.add_global_secondary_index(
+            index_name="SingleIdIndex",
+            partition_key=dynamodb.Attribute(name="singleId", type=dynamodb.AttributeType.STRING),
+            projection_type=dynamodb.ProjectionType.ALL
+        )
+        table_albums.add_global_secondary_index(
+            index_name="AlbumIdIndex", 
+            partition_key=dynamodb.Attribute(name="albumId", type=dynamodb.AttributeType.STRING),
+            projection_type=dynamodb.ProjectionType.ALL  
+        )
         table_singles.add_global_secondary_index(
             index_name="by-album-id",
             partition_key=dynamodb.Attribute(name="albumId", type=dynamodb.AttributeType.STRING),
