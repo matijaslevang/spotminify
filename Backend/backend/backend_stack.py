@@ -1388,6 +1388,31 @@ class BackendStack(Stack):
             lambda_event_sources.SqsEventSource(conversion_queue)
         )
 
+        get_transcription_lambda = _lambda.Function(
+            self, "GetTranscriptionLambda",
+            runtime=_lambda.Runtime.PYTHON_3_9,
+            handler="get_transcription.handler",
+            code=_lambda.Code.from_asset("backend/lambdas/transcribe"),
+            environment={
+                "TRANSCRIPTION_TABLE": table_transcriptions.table_name,
+            }
+        )
+        table_transcriptions.grant_read_data(get_transcription_lambda)
+
+        get_transcription = api.root.add_resource("get-transcription",
+            default_cors_preflight_options=apigw.CorsOptions(
+                allow_origins=apigw.Cors.ALL_ORIGINS,
+                allow_methods=["GET", "OPTIONS"],
+                allow_headers=["Content-Type", "X-Amz-Date", "Authorization", "X-Api-Key"]
+            ))
+
+        get_transcription.add_method(
+            "GET",
+            apigw.LambdaIntegration(get_transcription_lambda),
+            authorization_type=apigw.AuthorizationType.COGNITO,
+            authorizer=authorizer
+        )
+
 
         # test_s3_write_lambda = _lambda.Function(
         #     self, "TestS3WriteLambda",
