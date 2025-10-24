@@ -18,6 +18,9 @@
         <audio #audioPlayer controls (play)="onPlay(audioPlayer)" (pause)="onPause()" [src]="single.audioKey">
             Your browser does not support the audio element.
         </audio>
+        <button mat-button (click)="openTranscriptDialog(single.singleId)">
+            <mat-icon>list</mat-icon> Transcript
+        </button>
     </div>
     <br>
     <app-rate-content

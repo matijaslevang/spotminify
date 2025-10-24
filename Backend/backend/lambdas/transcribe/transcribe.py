@@ -48,7 +48,6 @@ def handler(event, context):
                     text = partial.get("partial", "")
                     if text:
                         print(f"[DEBUG] Partial -> {text}")
-                        transcription += text + " "
 
             final_res = json.loads(rec.FinalResult())
             print(f"[DEBUG] Final result: {final_res}")

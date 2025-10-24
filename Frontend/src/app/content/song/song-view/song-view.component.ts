@@ -7,6 +7,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { AuthService } from '../../../auth/auth.service';
 import { UpdateSongComponent } from '../update-song/update-song.component';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { TranscriptDialogComponent } from '../../transcript-dialog/transcript-dialog.component';
 
 @Component({
   selector: 'app-song-view',
@@ -31,7 +32,9 @@ export class SongViewComponent {
   isPlaying = false;
 
   isAdmin = false;
-  constructor(private contentService: ContentService, private snackBar: MatSnackBar,private router: Router, private cache: SongCacheService, private auth: AuthService, private dialog: MatDialog) {
+  constructor(private contentService: ContentService, private snackBar: MatSnackBar,private router: Router, private cache: SongCacheService, private auth: AuthService, private dialog: MatDialog,
+    private transcriptDialog: MatDialog
+  ) {
     const navigation = this.router.getCurrentNavigation();
     this.songId = navigation?.extras?.state?.['songId'];
     console.log(this.songId)
@@ -113,5 +116,12 @@ export class SongViewComponent {
           console.log(song)
         }
       })
+  }
+
+  openTranscriptDialog() {
+    const ref = this.transcriptDialog.open(TranscriptDialogComponent, {
+      width: '720px',
+      data: { singleId: this.songId } 
+    });
   }
 }

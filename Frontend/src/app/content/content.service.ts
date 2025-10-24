@@ -111,4 +111,8 @@ export class ContentService {
     return this.httpClient.delete(`${environment.apiUrl}/subscriptions/${targetId}`, {body: {subType: type, genres: genres}});
   }
 
+  getTranscription(singleId: string): Observable<any> {
+    return this.httpClient.get(`${environment.apiUrl}/get-transcription`, { params: { singleId: singleId } })
+  }
+
 }
